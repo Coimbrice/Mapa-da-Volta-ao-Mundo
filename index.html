@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A volta ao mundo de Phileas Fogg</title>
+<meta name="description" content="Mapa interativo de A volta ao mundo em 80 dias, de Júlio Verne: o plano de Fogg contra o caminho que ele de fato faz, capítulo a capítulo.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Spectral:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #e7ebe1;
+  --panel: #f3f4ee;
+  --ink: #1c2a22;
+  --muted: #56655b;
+  --rule: #c7cfc1;
+  --ocean: #b7cbc6;
+  --land: #f6f2e4;
+  --coast: #71837a;
+  --grat: rgba(28, 42, 34, 0.11);
+  --plan: #1f5fa6;
+  --real: #b3122e;
+  --pp: #6b3fa0;
+  --halo: rgba(246, 242, 228, 0.92);
+  --chip: #e2e6dc;
+  color-scheme: light;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+/* No escuro, os continentes ficam escuros também, para as linhas se destacarem */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12231a;
+    --panel: #172b21;
+    --ink: #ece6d3;
+    --muted: #a3ae9f;
+    --rule: #2b4436;
+    --ocean: #0c1b21;
+    --land: #34473b;
+    --coast: #7f9585;
+    --grat: rgba(236, 230, 211, 0.08);
+    --plan: #6cb4ff;
+    --real: #ef5350;
+    --pp: #c3aeff;
+    --halo: rgba(12, 27, 33, 0.9);
+    --chip: #203a2d;
+    color-scheme: dark;
+  }
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Spectral", Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  line-height: 1.55;
+}
+.app {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  height: 100%;
+}
+.stage {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+#globe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+}
+#globe:active { cursor: grabbing; }
+#globe:focus-visible { box-shadow: inset 0 0 0 3px var(--plan); }
+.zoom {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.zoom button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 600 20px/1 "Spectral", Georgia, serif;
+  cursor: pointer;
+}
+.zoom button + button { border-top: 1px solid var(--rule); }
+.zoom button:hover { background: var(--chip); }
+.zoom button:focus-visible { outline: 2px solid var(--plan); outline-offset: -2px; }
+.hint {
+  position: absolute;
+  left: 16px;
+  bottom: 12px;
+  margin: 0;
+  max-width: calc(100% - 90px);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.landmsg {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  margin: 0;
+  max-width: 60ch;
+  padding: 8px 12px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font-size: 14px;
+}
+.tip {
+  position: absolute;
+  pointer-events: none;
+  max-width: 260px;
+  padding: 8px 11px;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--real);
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.4;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+.tip.plan { border-left-color: var(--plan); }
+.tip strong { font-family: "IM Fell English", Georgia, serif; font-weight: 400; font-size: 17px; display: block; }
+.tip em { color: var(--muted); font-style: normal; display: block; }
+
+.panel {
+  background: var(--panel);
+  border-left: 1px solid var(--rule);
+  overflow-y: auto;
+  padding: 28px 28px 32px;
+}
+h1 {
+  font-family: "IM Fell English", Georgia, serif;
+  font-weight: 400;
+  font-size: 34px;
+  line-height: 1.08;
+  margin: 0 0 10px;
+  letter-spacing: -0.005em;
+}
+h1 i { display: block; font-size: 22px; color: var(--muted); margin-top: 4px; }
+.lede { margin: 0 0 22px; color: var(--muted); font-size: 15px; }
+h2 {
+  font-family: "IM Fell English", Georgia, serif;
+  font-weight: 400;
+  font-size: 21px;
+  margin: 0 0 8px;
+}
+
+.reader {
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 14px 0 14px;
+  margin-bottom: 18px;
+}
+.reader-label { margin: 0 0 6px; font-size: 14px; color: var(--muted); }
+.chnav { display: grid; grid-template-columns: 40px 1fr 40px; gap: 10px; align-items: center; }
+.chnav button {
+  width: 40px; height: 40px;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--ink);
+  font: 400 24px/1 "IM Fell English", Georgia, serif;
+  cursor: pointer;
+}
+.chnav button:hover:not(:disabled) { background: var(--chip); }
+.chnav button:disabled { opacity: 0.35; cursor: default; }
+.chnav button:focus-visible { outline: 2px solid var(--plan); outline-offset: 2px; }
+.chinfo { text-align: center; min-height: 72px; display: flex; flex-direction: column; justify-content: center; }
+.chnum { font-family: "IM Fell English", Georgia, serif; font-size: 30px; line-height: 1; }
+.chtitle { font-style: italic; font-size: 15px; line-height: 1.35; margin-top: 4px; }
+.now { margin: 14px 0 0; padding: 0; list-style: none; font-size: 15px; }
+.now li { display: grid; grid-template-columns: 16px 1fr; gap: 8px; align-items: baseline; margin-top: 6px; }
+.now .who { font-weight: 600; }
+.dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; transform: translateY(1px); }
+.dot.real { background: var(--real); }
+.dot.plan { border: 2px solid var(--plan); }
+.dot.pp { background: var(--pp); }
+.now .gap { display: block; color: var(--muted); font-size: 14px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-bottom: 20px; }
+.legend label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 15px; }
+.legend input { accent-color: var(--ink); width: 16px; height: 16px; margin: 0; }
+.swatch { width: 30px; height: 0; border-top-width: 3px; display: inline-block; }
+.swatch.plan { border-top-style: dashed; border-top-color: var(--plan); }
+.swatch.real { border-top-style: solid; border-top-color: var(--real); }
+.swatch.pp { border-top-style: solid; border-top-color: var(--pp); }
+
+.legs { list-style: none; margin: 0 0 26px; padding: 0; }
+.legs li { border-top: 1px solid var(--rule); }
+.legs li:last-child { border-bottom: 1px solid var(--rule); }
+.leg {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  padding: 12px 0 2px;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.leg:focus-visible { outline: 2px solid var(--plan); outline-offset: 2px; }
+.leg-n { font-family: "IM Fell English", Georgia, serif; font-size: 18px; color: var(--muted); }
+.leg-title { font-family: "IM Fell English", Georgia, serif; font-size: 20px; line-height: 1.2; }
+.leg:hover .leg-title { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+li.sel .leg-title { color: var(--real); }
+.badge {
+  font-size: 13px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--chip);
+  white-space: nowrap;
+}
+.badge.ahead { color: #2f6b3a; }
+.badge.late { color: var(--real); }
+.badge.none { color: var(--muted); font-style: italic; background: transparent; padding: 0; }
+@media (prefers-color-scheme: dark) { .badge.ahead { color: #8fd09b; } }
+.leg-body { padding: 0 0 12px 30px; font-size: 15px; }
+.leg-body p { margin: 4px 0 0; }
+.leg-body .k { color: var(--muted); }
+.detour {
+  margin-top: 8px;
+  padding: 4px 12px;
+  border: 1px solid var(--real);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--real);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.detour:hover { background: var(--chip); }
+.detour:focus-visible { outline: 2px solid var(--plan); outline-offset: 2px; }
+
+.balance svg, .money svg { width: 100%; height: auto; display: block; margin: 4px 0; overflow: visible; }
+.money { margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid var(--rule); }
+.money-total { margin: 0 0 4px; font-size: 15px; }
+.money-total b { font-weight: 600; }
+.money-today { display: block; color: var(--muted); font-size: 14px; }
+.money-items { list-style: none; margin: 12px 0 8px; padding: 0; font-size: 15px; }
+.money-items li { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 7px 0; border-top: 1px dotted var(--rule); }
+.money-items .amt { font-family: "IM Fell English", Georgia, serif; font-size: 18px; text-align: right; white-space: nowrap; }
+.money-items .amt.in { color: #2f6b3a; }
+.money-items .amt.none { font-family: inherit; font-size: 13px; font-style: italic; color: var(--muted); }
+.money-items .sub { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+.money-empty { font-size: 14px; color: var(--muted); font-style: italic; margin: 10px 0; }
+@media (prefers-color-scheme: dark) { .money-items .amt.in { color: #8fd09b; } }
+.note, .foot { font-size: 14px; color: var(--muted); margin: 6px 0 0; }
+.foot { margin-top: 22px; }
+
+@media (max-width: 860px) {
+  body { height: auto; }
+  .app { display: block; height: auto; }
+  .stage { height: 62vh; min-height: 340px; }
+  .panel { border-left: 0; border-top: 1px solid var(--rule); overflow: visible; padding: 22px 18px 28px; }
+  h1 { font-size: 30px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; }
+}
+</style>
+</head>
+<body>
+<main class="app">
+  <section class="stage" aria-label="Globo com as rotas">
+    <canvas id="globe" tabindex="0" aria-label="Globo interativo. Arraste ou use as setas para girar; mais e menos para aproximar."></canvas>
+    <p class="landmsg" id="landmsg" hidden>Os contornos dos continentes não carregaram; as rotas continuam no globo, só sem o mapa por baixo.</p>
+    <div class="tip" id="tip" hidden></div>
+    <p class="hint">Arraste para girar. Role ou faça pinça para aproximar.</p>
+    <div class="zoom">
+      <button type="button" id="zin" aria-label="Aproximar">+</button>
+      <button type="button" id="zout" aria-label="Afastar">−</button>
+      <button type="button" id="zreset" aria-label="Ver o mundo todo">◯</button>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <header>
+      <h1>A volta ao mundo de Phileas Fogg <i>o plano e o caminho</i></h1>
+      <p class="lede">O cálculo de 80 dias do Morning Chronicle, que Fogg leva ao pé da letra, contra o percurso que ele de fato faz no romance de Júlio Verne, de 1872. Use as setas para escolher o capítulo e toque num trecho para ir até ele no globo.</p>
+    </header>
+
+    <div class="reader">
+      <p class="reader-label">Até onde você leu</p>
+      <div class="chnav">
+        <button type="button" id="prev" aria-label="Capítulo anterior">‹</button>
+        <div class="chinfo" aria-live="polite">
+          <span class="chnum" id="chNum"></span>
+          <span class="chtitle" id="chTitle"></span>
+        </div>
+        <button type="button" id="next" aria-label="Próximo capítulo">›</button>
+      </div>
+      <ul class="now" id="now"></ul>
+    </div>
+
+    <section class="money" aria-labelledby="moneyH">
+      <h2 id="moneyH">Dinheiro</h2>
+      <div id="moneyTotal"></div>
+      <ul class="money-items" id="moneyItems"></ul>
+      <svg id="spend" viewBox="0 0 340 160" role="img" aria-label="Gasto acumulado de Fogg por capítulo, em libras"></svg>
+      <p class="note">Linha vermelha: soma dos gastos que o livro dá com valor, capítulo a capítulo. Círculos azuis: as contas que o próprio livro faz do total. A diferença são passagens, hotéis e gorjetas que o texto não diz quanto custaram.</p>
+    </section>
+
+    <div class="legend">
+      <label><input type="checkbox" id="showPlan" checked><span class="swatch plan"></span>Plano</label>
+      <label><input type="checkbox" id="showReal" checked><span class="swatch real"></span>Fogg</label>
+      <label><input type="checkbox" id="showPP" checked><span class="swatch pp"></span>Passepartout sozinho</label>
+    </div>
+
+    <ol class="legs" id="legs"></ol>
+
+    <section class="balance" aria-labelledby="balH">
+      <h2 id="balH">Adiantado ou atrasado</h2>
+      <svg id="bal" viewBox="0 0 340 150" role="img" aria-label="Folga de Fogg em relação ao itinerário, em horas"></svg>
+      <p class="note">Horas de folga em relação ao itinerário de Fogg, nos pontos em que o livro faz a conta. Em Londres, a conta é contra o prazo do Reform Club.</p>
+    </section>
+
+    <p class="foot">Títulos dos capítulos traduzidos do original francês, <i>Le Tour du monde en quatre-vingts jours</i> (1872), em domínio público (Project Gutenberg, nº 800). Trajetos reconstituídos a partir do texto e das linhas de trem e vapor da época. Kholby e o pagode de Pillaji são lugares inventados por Verne, e pontos como as tempestades e os bisões estão em posição aproximada. A posição pelo plano segue o itinerário de Fogg nas datas que o livro dá e, no resto, os dias do Morning Chronicle; a diferença em horas é uma estimativa. Valores de hoje: £1 de 1872 equivale a cerca de £147 em 2026 pela inflação britânica, convertidos a R$ 6,79 e US$ 1,33 por libra (cotação de 17 de outubro de 2026). Dólares de 1872 viram libras a US$ 4,86 por libra, o câmbio-ouro da época. É uma régua de poder de compra, não de preço exato.</p>
+    <p class="foot">Feito por Luís Coimbra, para acompanhar a leitura num clube do livro.</p>
+  </aside>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/datamaps/0.5.9/datamaps.world.min.js"></script>
+<script>
+(function () {
+  if (!window.d3) {
+    document.getElementById('landmsg').textContent = 'O globo não carregou. Recarregue a página para tentar de novo.';
+    document.getElementById('landmsg').hidden = false;
+    return;
+  }
+
+  const TITLES = {"1": ["I", "Em que Phileas Fogg e Passepartout se aceitam mutuamente, um como patrão, o outro como criado."], "2": ["II", "Em que Passepartout se convence de que finalmente encontrou o seu ideal."], "3": ["III", "Em que começa uma conversa que pode custar caro a Phileas Fogg."], "4": ["IV", "Em que Phileas Fogg deixa Passepartout, seu criado, estupefato."], "5": ["V", "Em que um novo valor aparece na praça de Londres."], "6": ["VI", "Em que o agente Fix mostra uma impaciência muito justa."], "7": ["VII", "Que prova mais uma vez a inutilidade dos passaportes em matéria de polícia."], "8": ["VIII", "Em que Passepartout fala talvez um pouco mais do que convinha."], "9": ["IX", "Em que o mar Vermelho e o mar das Índias se mostram favoráveis aos planos de Phileas Fogg."], "10": ["X", "Em que Passepartout se dá por muito feliz de escapar perdendo só os sapatos."], "11": ["XI", "Em que Phileas Fogg compra uma montaria por um preço fabuloso."], "12": ["XII", "Em que Phileas Fogg e seus companheiros se aventuram pelas florestas da Índia, e o que daí resulta."], "13": ["XIII", "Em que Passepartout prova mais uma vez que a sorte sorri aos audaciosos."], "14": ["XIV", "Em que Phileas Fogg desce todo o admirável vale do Ganges sem sequer pensar em vê-lo."], "15": ["XV", "Em que o saco de notas fica ainda mais leve em alguns milhares de libras."], "16": ["XVI", "Em que Fix não parece saber nada das coisas de que lhe falam."], "17": ["XVII", "Em que se conversa sobre isto e aquilo durante a travessia de Singapura a Hong Kong."], "18": ["XVIII", "Em que Phileas Fogg, Passepartout e Fix, cada um por seu lado, cuidam de seus assuntos."], "19": ["XIX", "Em que Passepartout se interessa demais pelo patrão, e o que daí resulta."], "20": ["XX", "Em que Fix entra em contato direto com Phileas Fogg."], "21": ["XXI", "Em que o patrão da Tankadère corre sério risco de perder um prêmio de duzentas libras."], "22": ["XXII", "Em que Passepartout percebe que, mesmo nos antípodas, é prudente ter algum dinheiro no bolso."], "23": ["XXIII", "Em que o nariz de Passepartout se alonga desmedidamente."], "24": ["XXIV", "Durante o qual se faz a travessia do oceano Pacífico."], "25": ["XXV", "Em que se dá uma rápida ideia de São Francisco em dia de comício."], "26": ["XXVI", "Em que se toma o trem expresso da ferrovia do Pacífico."], "27": ["XXVII", "Em que Passepartout segue, a vinte milhas por hora, um curso de história mórmon."], "28": ["XXVIII", "Em que Passepartout não consegue fazer ouvir a voz da razão."], "29": ["XXIX", "Em que se contam vários incidentes que só acontecem nas ferrovias da União."], "30": ["XXX", "Em que Phileas Fogg faz, pura e simplesmente, o seu dever."], "31": ["XXXI", "Em que o inspetor Fix leva muito a sério os interesses de Phileas Fogg."], "32": ["XXXII", "Em que Phileas Fogg trava uma luta direta contra o azar."], "33": ["XXXIII", "Em que Phileas Fogg se mostra à altura das circunstâncias."], "34": ["XXXIV", "Que dá a Passepartout a ocasião de fazer um trocadilho atroz, mas talvez inédito."], "35": ["XXXV", "Em que Passepartout não espera que o patrão lhe repita a ordem."], "36": ["XXXVI", "Em que Phileas Fogg volta a ter cotação no mercado."], "37": ["XXXVII", "Em que se prova que Phileas Fogg não ganhou nada com esta volta ao mundo, a não ser a felicidade."]};
+  const MAX_CH = 37;
+
+  // Lugares (longitude, latitude)
+  const LON = [-0.128, 51.507], PARIS = [2.352, 48.857], TURIM = [7.69, 45.07], BRINDISI = [17.94, 40.64],
+    SUEZ = [32.55, 29.97], ADEN = [45.03, 12.78], BOMBAIM = [72.84, 18.94], BURHAMPOUR = [76.23, 21.31],
+    KHOLBY = [81.2, 24.98], BANGALO = [81.08, 25.2], PILLAJI = [81.32, 25.33], ALLAHABAD = [81.85, 25.44],
+    BENARES = [83.0, 25.32], CALCUTA = [88.36, 22.57], ANDAMAN = [93.4, 12.5], MALACA = [97.8, 5.9],
+    SINGAPURA = [103.85, 1.27], TEMPESTADE = [112.6, 18.8], HK = [114.17, 22.29], YOKO = [139.64, 35.44],
+    FOKIEN = [119.6, 25.0], BORRASCA = [120.9, 27.0], XANGAI = [121.75, 31.3], NAGASAKI = [129.87, 32.75],
+    MERIDIANO = [180, 47.07], SF = [-122.40, 37.79], OAKLAND = [-122.27, 37.80], SACRAMENTO = [-121.49, 38.58],
+    CISCO = [-120.56, 39.31], RENO = [-119.81, 39.53], BISOES = [-118.9, 39.9], UTAH = [-114.04, 41.0],
+    EVANS = [-105.39, 41.13], JULESBURG = [-102.26, 40.99], NPLATTE = [-100.77, 41.12], PLUMCREEK = [-99.74, 40.78],
+    ATAQUE = [-99.13, 40.71], KEARNEY = [-99.08, 40.70], COMBATE = [-99.05, 40.56], OMAHA = [-95.94, 41.26], CHICAGO = [-87.63, 41.88],
+    QUEENSTOWN = [-8.29, 51.85], DUBLIN = [-6.26, 53.35], HENRIETTA = [-17.5, 51.2],
+    LAGO = [-112.6, 41.55], OGDEN = [-111.97, 41.22], SLC = [-111.89, 40.76], FORTBRIDGER = [-110.39, 41.32],
+    GREENRIVER = [-109.47, 41.53], PASSO = [-107.7, 41.7], MEDBOW = [-106.2, 41.9],
+    NY = [-74.0, 40.71], LIVERPOOL = [-3.0, 53.41], FUMADOURO = [114.15, 22.28], YOKO_PP = [139.62, 35.46];
+
+  const pacificJapan = [[131.6, 31.0], [133.5, 32.4], [135.8, 33.2], [138.6, 34.3], [139.75, 34.95], [139.75, 35.25], YOKO];
+  const seg = {
+    lonParis: [LON, [1.31, 51.12], [1.86, 50.95], PARIS],
+    parisTurim: [PARIS, [5.04, 47.32], [4.83, 46.31], [5.92, 45.57], [6.67, 45.2], TURIM],
+    turimBrindisi: [TURIM, [11.34, 44.49], [13.52, 43.62], [15.55, 41.46], [16.87, 41.12], BRINDISI],
+    brindisiSuez: [BRINDISI, [18.9, 39.9], [19.8, 37.8], [22.4, 35.9], [23.5, 34.6], [27, 33.3], [32.3, 31.27], [32.32, 30.9], [32.27, 30.59], [32.45, 30.2], SUEZ],
+    suezAden: [SUEZ, [32.58, 29.5], [33.8, 27.6], [35.4, 25.2], [37.6, 22.0], [39.4, 19.0], [41.2, 16.0], [42.6, 14.0], [43.4, 12.65], [44.3, 12.4], ADEN],
+    adenBombaim: [ADEN, [50, 13.2], [54.5, 14.3], [62, 17], [70, 18.6], BOMBAIM],
+    bombaimBurhampour: [BOMBAIM, [73.13, 19.24], [73.47, 19.65], [73.79, 20.0], [75.79, 21.05], BURHAMPOUR],
+    burhampourKholby: [BURHAMPOUR, [76.35, 21.82], [77.76, 22.61], [79.95, 23.18], [80.39, 23.83], [80.83, 24.58], KHOLBY],
+    kholbyAllahabadTrem: [KHOLBY, [81.45, 25.18], ALLAHABAD],
+    kholbyBangalo: [KHOLBY, [81.02, 25.08], BANGALO],
+    bangaloPillaji: [BANGALO, PILLAJI],
+    pillajiAllahabad: [PILLAJI, [81.6, 25.42], ALLAHABAD],
+    allahabadBenares: [ALLAHABAD, [82.35, 25.33], BENARES],
+    benaresCalcuta: [BENARES, [83.98, 25.56], [85.14, 25.6], [85.92, 25.39], [86.49, 25.31], [86.98, 25.25], [87.64, 25.24], [87.78, 24.17], [87.86, 23.23], [88.37, 22.87], CALCUTA],
+    calcutaAndaman: [CALCUTA, [88.1, 22.0], [88.05, 21.55], [88.6, 20.5], [90.5, 17.5], [93.2, 14.0], ANDAMAN],
+    andamanMalaca: [ANDAMAN, [94.5, 9.0], [96.2, 6.5], MALACA],
+    malacaSingapura: [MALACA, [99.3, 4.5], [100.4, 3.3], [101.5, 2.4], [102.8, 1.6], [103.5, 1.15], SINGAPURA],
+    singapuraTempestade: [SINGAPURA, [104.3, 1.3], [104.9, 2.5], [106.5, 6.0], [109.3, 10.5], [110.2, 13.5], [111.5, 16.5], TEMPESTADE],
+    tempestadeHK: [TEMPESTADE, [113.6, 20.6], [114.0, 21.8], HK],
+    // rota do plano e do Carnatic
+    hkYoko: [HK, [114.3, 22.2], [116.5, 22.6], [119.7, 24.6], [122.0, 27.5], [124.5, 30.2], [129.8, 30.7]].concat(pacificJapan),
+    // a Tankadère, colada à costa
+    hkFokien: [HK, [114.6, 22.25], [116.5, 22.9], [118.2, 24.1], FOKIEN],
+    fokienBorrasca: [FOKIEN, BORRASCA],
+    borrascaXangai: [BORRASCA, [121.6, 28.2], [122.8, 29.8], [122.4, 30.9], XANGAI],
+    // o vapor americano, passando por Nagasaki
+    xangaiNagasaki: [XANGAI, [123.5, 31.5], [128.5, 32.4], [129.7, 32.7], NAGASAKI],
+    nagasakiYoko: [NAGASAKI, [129.4, 31.6], [130.1, 30.7]].concat(pacificJapan),
+    yokoMeridiano: [YOKO, [139.75, 35.25], [139.75, 34.95], [141, 34.6], MERIDIANO],
+    meridianoSF: [MERIDIANO, [-122.6, 37.8], SF],
+    sfOakland: [SF, OAKLAND],
+    oaklandSacramento: [OAKLAND, SACRAMENTO],
+    sacramentoCisco: [SACRAMENTO, CISCO],
+    ciscoReno: [CISCO, RENO],
+    renoBisoes: [RENO, BISOES],
+    bisoesUtah: [BISOES, [-118.47, 40.18], [-117.73, 40.97], [-115.76, 40.83], UTAH],
+    utahLago: [UTAH, [-113.1, 41.75], LAGO],
+    lagoOgden: [LAGO, [-112.1, 41.5], OGDEN],
+    ogdenSLC: [OGDEN, SLC],
+    ogdenFortBridger: [OGDEN, [-111.85, 41.13], [-111.4, 40.97], [-110.96, 41.27], FORTBRIDGER],
+    fortBridgerGreen: [FORTBRIDGER, GREENRIVER],
+    greenPasso: [GREENRIVER, [-108.6, 41.65], PASSO],
+    passoMedBow: [PASSO, [-107.24, 41.79], MEDBOW],
+    medBowEvans: [MEDBOW, [-105.59, 41.31], EVANS],
+    evansJulesburg: [EVANS, [-104.82, 41.14], [-103.6, 41.05], JULESBURG],
+    julesburgNPlatte: [JULESBURG, NPLATTE],
+    nplattePlum: [NPLATTE, [-100.3, 40.95], PLUMCREEK],
+    plumAtaque: [PLUMCREEK, ATAQUE],
+    ataqueKearney: [ATAQUE, KEARNEY],
+    ataqueCombate: [ATAQUE, [-99.1, 40.63], COMBATE],
+    kearneyCombate: [KEARNEY, COMBATE],
+    kearneyOmahaTrem: [KEARNEY, [-98.34, 40.92], [-97.37, 41.43], [-96.5, 41.43], OMAHA],
+    kearneyOmahaTreno: [KEARNEY, OMAHA],
+    omahaChicago: [OMAHA, [-93.6, 41.59], [-90.58, 41.52], CHICAGO],
+    chicagoNY: [CHICAGO, [-85.14, 41.08], [-79.99, 40.44], [-76.88, 40.27], [-75.16, 39.95], NY],
+    nyQueenstown: [NY, [-74.0, 40.47], [-70.5, 40.6], [-60, 42.5], [-45, 46.5], [-30, 49.8], HENRIETTA],
+    henriettaQueenstown: [HENRIETTA, [-11, 51.4], QUEENSTOWN],
+    queenstownDublin: [QUEENSTOWN, [-8.47, 51.9], [-7.6, 52.6], [-7.0, 53.0], DUBLIN],
+    dublinLiverpool: [DUBLIN, [-6.0, 53.35], [-4.5, 53.45], [-3.6, 53.5], LIVERPOOL],
+    nyLiverpool: [NY, [-74.0, 40.5], [-70.5, 40.6], [-60, 42.5], [-50, 45.0], [-30, 50.0], [-12, 51.5], [-6.3, 51.9], [-5.8, 52.2], [-4.8, 53.5], [-3.6, 53.5], LIVERPOOL],
+    liverpoolLondres: [LIVERPOOL, [-2.44, 53.1], [-1.9, 52.48], [-1.26, 52.37], LON]
+  };
+  const join = (...parts) => parts.reduce((acc, p) => acc.concat(acc.length ? p.slice(1) : p), []);
+  const yokoSF = join(seg.yokoMeridiano, seg.meridianoSF);
+  const sfNY = join(seg.sfOakland, seg.oaklandSacramento, seg.sacramentoCisco, seg.ciscoReno, seg.renoBisoes, seg.bisoesUtah,
+    seg.utahLago, seg.lagoOgden, seg.ogdenFortBridger, seg.fortBridgerGreen, seg.greenPasso, seg.passoMedBow,
+    seg.medBowEvans, seg.evansJulesburg, seg.julesburgNPlatte, seg.nplattePlum, seg.plumAtaque, seg.ataqueKearney, seg.kearneyOmahaTrem, seg.omahaChicago, seg.chicagoNY);
+  const bombaimCalcutaTrem = join(seg.bombaimBurhampour, seg.burhampourKholby, seg.kholbyAllahabadTrem, seg.allahabadBenares, seg.benaresCalcuta);
+  const calcutaSingapura = join(seg.calcutaAndaman, seg.andamanMalaca, seg.malacaSingapura);
+  const singapuraHK = join(seg.singapuraTempestade, seg.tempestadeHK);
+
+  // O plano
+  const plan = [
+    { from: 'Londres', to: 'Suez', pts: join(seg.lonParis, seg.parisTurim, seg.turimBrindisi, seg.brindisiSuez),
+      text: '7 dias de trem e navio, pelo Monte Cenis e Brindisi. Chegada em 9 de outubro.' },
+    { from: 'Suez', to: 'Bombaim', pts: join(seg.suezAden, seg.adenBombaim),
+      text: '13 dias de navio. Chegada em 22 de outubro.' },
+    { from: 'Bombaim', to: 'Calcutá', pts: bombaimCalcutaTrem,
+      text: '3 dias de trem, pela linha que os jornais deram por inaugurada. Chegada em 25 de outubro.',
+      detour: { minCh: 11, label: 'Ver o desvio de elefante de perto', pts: [KHOLBY, BANGALO, PILLAJI, ALLAHABAD] } },
+    { from: 'Calcutá', to: 'Hong Kong', pts: join(calcutaSingapura, singapuraHK),
+      text: '13 dias de navio pela conta do jornal; o itinerário de Fogg marca a chegada para 5 de novembro.' },
+    { from: 'Hong Kong', to: 'Yokohama', pts: seg.hkYoko,
+      text: '6 dias no Carnatic, que devia partir em 5 de novembro. Fogg precisa estar em Yokohama até o dia 14 para o vapor de São Francisco.',
+      detour: { minCh: 20, label: 'Ver a Tankadère e o Carnatic', pts: [HK, XANGAI, NAGASAKI, YOKO] } },
+    { from: 'Yokohama', to: 'São Francisco', pts: yokoSF, text: '22 dias de navio pelo Pacífico.' },
+    { from: 'São Francisco', to: 'Nova York', pts: sfNY, text: '7 dias de trem. Fogg conta embarcar em Nova York no China, que sai em 11 de dezembro às 21h.',
+      detour: { minCh: 30, label: 'Ver o ataque e o resgate de perto', pts: [ATAQUE, COMBATE, KEARNEY, [-99.0, 40.72]] } },
+    { from: 'Nova York', to: 'Londres', pts: join(seg.nyLiverpool, seg.liverpoolLondres), text: '9 dias de navio e trem. Prazo final: 21 de dezembro, 20h45, no Reform Club.',
+      detour: { minCh: 33, label: 'Ver Queenstown e Dublin', pts: [HENRIETTA, QUEENSTOWN, DUBLIN, LIVERPOOL] } }
+  ];
+
+  // Onde o plano espera Fogg em cada momento (datas do livro quando existem; senão, os dias do Morning Chronicle)
+  const T = (m, d, h = 0, mi = 0) => Date.UTC(1872, m - 1, d, h, mi);
+  const schedule = [
+    { pts: seg.lonParis, t0: T(10, 2, 20, 45), t1: T(10, 3, 7, 20), go: 'de trem e barco para Paris', at: 'em Paris' },
+    { pts: seg.parisTurim, t0: T(10, 3, 8, 40), t1: T(10, 4, 6, 35), go: 'de trem para Turim, pelo Monte Cenis', at: 'em Turim' },
+    { pts: seg.turimBrindisi, t0: T(10, 4, 7, 20), t1: T(10, 5, 16), go: 'de trem para Brindisi', at: 'em Brindisi' },
+    { pts: seg.brindisiSuez, t0: T(10, 5, 17), t1: T(10, 9, 11), go: 'no Mongólia, rumo a Suez', at: 'em Suez' },
+    { pts: seg.suezAden, t0: T(10, 9, 14), t1: T(10, 15, 8), go: 'no mar Vermelho, rumo a Áden', at: 'em Áden' },
+    { pts: seg.adenBombaim, t0: T(10, 15, 14), t1: T(10, 22, 16, 30), go: 'no mar das Índias, rumo a Bombaim', at: 'em Bombaim' },
+    { pts: bombaimCalcutaTrem, t0: T(10, 22, 20), t1: T(10, 25, 7), go: 'no trem de Bombaim a Calcutá', at: 'em Calcutá' },
+    { pts: calcutaSingapura, t0: T(10, 25, 12), t1: T(10, 31, 16), go: 'no Rangoon, rumo a Singapura', at: 'em Singapura' },
+    { pts: singapuraHK, t0: T(10, 31, 23), t1: T(11, 5, 6), go: 'no Rangoon, rumo a Hong Kong', at: 'em Hong Kong' },
+    { pts: seg.hkYoko, t0: T(11, 5, 18), t1: T(11, 11, 18), go: 'no Carnatic, rumo a Yokohama', at: 'em Yokohama, esperando o vapor de São Francisco' },
+    { pts: yokoSF, t0: T(11, 14, 18, 30), t1: T(12, 3, 7), go: 'cruzando o Pacífico', at: 'em São Francisco' },
+    { pts: sfNY, t0: T(12, 3, 18), t1: T(12, 11, 6), go: 'no trem para Nova York', at: 'em Nova York' },
+    { pts: join(seg.nyLiverpool, seg.liverpoolLondres), t0: T(12, 11, 21), t1: T(12, 20, 22), go: 'no Atlântico, rumo a Liverpool', at: 'em Londres' }
+  ];
+  schedule.forEach(s => {
+    s.cum = [0];
+    for (let i = 1; i < s.pts.length; i++) s.cum.push(s.cum[i - 1] + d3.geoDistance(s.pts[i - 1], s.pts[i]));
+  });
+  function planAt(t) {
+    if (t < schedule[0].t0) return { ll: LON, text: 'em Londres, antes da partida' };
+    for (let i = 0; i < schedule.length; i++) {
+      const s = schedule[i];
+      if (t < s.t0) return { ll: s.pts[0], text: schedule[i - 1].at };
+      if (t < s.t1) {
+        const target = s.cum[s.cum.length - 1] * (t - s.t0) / (s.t1 - s.t0);
+        let j = 1;
+        while (j < s.cum.length - 1 && s.cum[j] < target) j++;
+        const segLen = s.cum[j] - s.cum[j - 1] || 1;
+        const k = Math.max(0, Math.min(1, (target - s.cum[j - 1]) / segLen));
+        return { ll: d3.geoInterpolate(s.pts[j - 1], s.pts[j])(k), text: s.go };
+      }
+    }
+    const last = schedule[schedule.length - 1];
+    return { ll: last.pts[last.pts.length - 1], text: last.at };
+  }
+
+  // Quanto Fogg está adiantado ou atrasado: em que hora o plano o colocaria onde ele está?
+  function leadHours(now) {
+    const t0 = now.tPlan || now.t;
+    const step = 1800e3, span = 20 * 864e5;
+    let samples = [];
+    for (let t = t0 - span; t <= t0 + span; t += step) {
+      samples.push({ t, d: d3.geoDistance(planAt(t).ll, now.ll) * 6371 });
+    }
+    const dmin = d3.min(samples, x => x.d);
+    if (dmin > 120) return null;
+    const near = samples.filter(x => x.d <= dmin + 25);
+    // na chegada, compara com a chegada prevista, não com o fim da escala
+    const best = now.arr ? near[0] : near.reduce((a, b) => (Math.abs(b.t - t0) < Math.abs(a.t - t0) ? b : a));
+    return (best.t - t0) / 36e5;
+  }
+
+  // O que aconteceu, trecho a trecho: [capítulo, texto, selo, classe do selo]
+  const real = [
+    [[4, 'Saiu de Charing Cross em 2 de outubro, às 20h45.', 'a caminho', 'none'],
+     [6, 'Paris, Monte Cenis, Turim, Brindisi e o Mongólia. Chegou a Suez em 9 de outubro às 11h, sem ganho nem perda.', 'em dia', '']],
+    [[9, 'Escala em Áden no fim do dia 14, quinze horas antes do previsto. Chegou a Bombaim em 20 de outubro.', '+2 dias', 'ahead']],
+    [[11, 'Trem das 20h. Em Kholby, em 22 de outubro, os trilhos acabam: faltam umas 50 milhas até Allahabad. Fogg compra um elefante.', '+2 dias', 'ahead'],
+     [12, 'De elefante pelo Bundelkund, com o guia parse e Sir Francis Cromarty. Noite num bangalô ao pé dos Vindhias.', 'gastando folga', 'ahead'],
+     [13, 'Desvio até o pagode de Pillaji para tirar Aouda da pira.', 'gastando folga', 'ahead'],
+     [14, 'Allahabad, Benarés e trem até Calcutá, onde chega em 25 de outubro às 7h. Os dois dias ganhos foram embora na Índia.', 'em dia', '']],
+    [[15, 'Embarca no Rangoon em 25 de outubro, rumo a Hong Kong.', 'em dia', ''],
+     [16, 'Golfo de Bengala e ilhas Andaman com tempo bom.', 'em dia', ''],
+     [17, 'Singapura em 31 de outubro às 4h, meia jornada adiantado. Parte às 11h.', '+12 h', 'ahead'],
+     [18, 'Tempestade em 3 e 4 de novembro. Terra à vista só no dia 6, às 5h, contra o dia 5 do itinerário. O Carnatic, que devia ter partido, ficou no porto consertando uma caldeira.', '−24 h', 'late']],
+    [[19, 'Fix leva Passepartout a um fumadouro e o deixa dopado de ópio. Ninguém avisa Fogg de que o Carnatic vai sair antes da hora.', 'em risco', 'late'],
+     [20, 'O Carnatic partiu sem Fogg. Ele fretou a Tankadère, escuna de 20 toneladas de John Bunsby, para ir até Xangai, de onde sai o vapor de São Francisco.', 'desvio', 'late'],
+     [21, 'Pela costa da China, estreito de Fo-Kien e uma borrasca. No dia 11, às 19h, a três milhas de Xangai, a Tankadère dispara o canhão para chamar o vapor.', 'por um triz', 'late'],
+     [22, 'Fogg ficou diante de Xangai. Enquanto isso, Passepartout acordou a bordo do Carnatic e chegou sozinho a Yokohama no dia 13, sem dinheiro.', 'separados', 'late'],
+     [23, 'Passepartout entra para a trupe do Batulcar. No espetáculo do dia 14 vê Fogg na plateia, e os três embarcam no navio americano às 18h30.', 'juntos de novo', ''],
+     [24, 'O vapor recolheu o grupo diante de Xangai e seguiu por Nagasaki até Yokohama, onde chegou na manhã do dia 14, no horário. Passepartout tinha ido direto, no Carnatic.', 'em dia', '']],
+    [[23, 'Embarca no General Grant em 14 de novembro, às 18h30.', 'a caminho', 'none'],
+     [24, 'Passa o meridiano 180 em 23 de novembro e chega a São Francisco em 3 de dezembro, sem ganhar nem perder um dia.', 'em dia', '']],
+    [[25, 'Um dia em São Francisco, no meio de um comício e de uma briga com o coronel Stamp W. Proctor. O trem sai de Oakland às 18h.', 'em dia', ''],
+     [26, 'Sacramento à meia-noite, Sierra Nevada de manhã, Reno ao meio-dia. Uma manada de bisões para o trem por três horas. Entra em Utah às 21h30.', 'a caminho', 'none'],
+     [27, 'O trem contorna o Grande Lago Salgado enquanto Passepartout ouve a pregação de um missionário mórmon. Na parada em Ogden, o grupo visita Salt Lake City.', 'a caminho', 'none'],
+     [28, 'Fort Bridger às 22h e Wyoming. Em Green River, Aouda vê o coronel Proctor no trem, e Fix põe Fogg para jogar whist. A ponte de Medicine Bow está abalada: o maquinista passa a toda velocidade, e ela desaba logo atrás.', 'a caminho', 'none'],
+     [29, 'Em Plum Creek, o duelo com Proctor dentro do trem é interrompido por um ataque dos dacotas. Passepartout passa por baixo dos vagões e desengata a locomotiva, e o trem para junto ao forte Kearney. Ele some, levado pelos índios.', 'separados', 'late'],
+     [30, 'Fogg sai atrás com trinta soldados e resgata Passepartout umas dez milhas ao sul, na manhã seguinte. O trem partiu sem eles, e o próximo só passa à noite.', '≈ −20 h', 'late'],
+     [31, 'Fix arranja o trenó a vela de Mudge: umas 200 milhas pela pradaria gelada até Omaha em cinco horas. Trem até Chicago e Nova York, onde chega às 23h15 do dia 11. O China tinha partido 45 minutos antes.', 'perdeu o China', 'late']],
+    [[32, 'Sem navio a tempo, Fogg sobe no cargueiro Henrietta, do capitão Andrew Speedy, que só aceita ir até Bordeaux.', 'em risco', 'late'],
+     [33, 'Fogg suborna a tripulação, tranca Speedy na cabine e muda o rumo para Liverpool. Sem carvão, compra o navio e queima a madeira dele. Desce em Queenstown, segue de trem até Dublin e de vapor até Liverpool: 11h40 do dia 21.', 'margem de 3 h', 'ahead'],
+     [34, 'Fix o prende na alfândega de Liverpool. Solto quando se descobre que o verdadeiro ladrão já tinha sido preso, pega um trem especial às 15h e chega a Londres às 20h50: cinco minutos depois do prazo, pelas contas dele.', '−5 min', 'late'],
+     [35, 'Arruinado, passa o domingo em Saville Row. Aouda o pede em casamento, e Passepartout sai para avisar o reverendo.', 'aposta perdida', 'late'],
+     [36, 'No Reform Club, os cinco colegas esperam com o relógio na mão, enquanto Londres volta a apostar nele.', 'em suspenso', 'none'],
+     [37, 'Era sábado, não domingo. Viajando para o leste, Fogg viu o sol nascer uma vez a mais que Londres e ganhou um dia sem perceber. Entra no Reform Club às 20h45 do dia 21 e vence a aposta.', '+1 dia', 'ahead']]
+  ];
+
+  // Paradas de Fogg
+  const stops = [
+    { name: 'Londres', ll: LON, ch: 4, date: '2 out, 20h45', note: 'Partida com Passepartout.', rank: 1 },
+    { name: 'Paris', ll: PARIS, ch: 6, date: '3 out, 7h20', path: seg.lonParis, rank: 2 },
+    { name: 'Turim', ll: TURIM, ch: 6, date: '4 out, 6h35', note: 'Pelo Monte Cenis.', path: seg.parisTurim, rank: 2 },
+    { name: 'Brindisi', ll: BRINDISI, ch: 6, date: '5 out, 16h', note: 'Embarque no Mongólia.', path: seg.turimBrindisi, rank: 2 },
+    { name: 'Suez', ll: SUEZ, ch: 6, date: '9 out, 11h', note: 'Exatamente no horário.', path: seg.brindisiSuez, rank: 1 },
+    { name: 'Áden', ll: ADEN, ch: 9, date: '14 out, ao anoitecer', note: '15 horas antes do previsto.', path: seg.suezAden, rank: 2 },
+    { name: 'Bombaim', ll: BOMBAIM, ch: 9, date: '20 out, 16h30', note: 'Dois dias adiantado.', path: seg.adenBombaim, rank: 1 },
+    { name: 'Burhampour', ll: BURHAMPOUR, ch: 11, date: '21 out, 12h30', note: 'Passepartout compra pantufas.', path: seg.bombaimBurhampour, rank: 3 },
+    { name: 'Kholby', ll: KHOLBY, ch: 11, date: '22 out, 8h', note: 'Fim dos trilhos. Lugar inventado; posição aproximada.', path: seg.burhampourKholby, rank: 4 },
+    { name: 'Bangalô', ll: BANGALO, ch: 12, date: '22 out, 20h', note: 'Pernoite ao pé dos Vindhias, depois de umas 25 milhas de elefante. Posição aproximada.', path: seg.kholbyBangalo, rank: 4 },
+    { name: 'Pagode de Pillaji', ll: PILLAJI, ch: 13, date: '23–24 out', note: 'Resgate de Aouda antes do amanhecer. Lugar inventado; posição aproximada.', path: seg.bangaloPillaji, rank: 4 },
+    { name: 'Allahabad', ll: ALLAHABAD, ch: 14, date: '24 out, perto das 10h', path: seg.pillajiAllahabad, rank: 3 },
+    { name: 'Benarés', ll: BENARES, ch: 14, date: '24 out, 12h30', path: seg.allahabadBenares, rank: 3 },
+    { name: 'Calcutá', ll: CALCUTA, ch: 14, date: '25 out, 7h', note: 'Em dia: os dois dias ganhos se foram.', path: seg.benaresCalcuta, rank: 1 },
+    { name: 'Ilhas Andaman', ll: ANDAMAN, ch: 16, date: 'fim de outubro', path: seg.calcutaAndaman, rank: 3 },
+    { name: 'Estreito de Malaca', ll: MALACA, ch: 17, date: '30 out, à tarde', path: seg.andamanMalaca, rank: 3 },
+    { name: 'Singapura', ll: SINGAPURA, ch: 17, date: '31 out, 4h', note: 'Meia jornada adiantado. Parte às 11h.', path: seg.malacaSingapura, rank: 1 },
+    { name: 'Tempestade', ll: TEMPESTADE, ch: 18, date: '3 e 4 nov', note: 'O Rangoon segue à capa por meio dia. Posição aproximada.', path: seg.singapuraTempestade, rank: 3 },
+    { name: 'Hong Kong', ll: HK, ch: 18, date: '6 nov, de manhã', note: '24 horas atrasado.', path: seg.tempestadeHK, rank: 1 },
+    { name: 'Estreito de Fo-Kien', ll: FOKIEN, ch: 21, date: 'madrugada de 9 nov', note: 'A Tankadère segue colada à costa da China.', path: seg.hkFokien, rank: 3 },
+    { name: 'Borrasca', ll: BORRASCA, ch: 21, date: '9 nov', note: 'A escuna aguenta a tempestade só com a vela pequena. Posição aproximada.', path: seg.fokienBorrasca, rank: 3 },
+    { name: 'Diante de Xangai', ll: XANGAI, ch: 21, date: '11 nov, 19h', note: 'A três milhas de Xangai, a Tankadère dispara o canhão e o vapor americano a recolhe.', path: seg.borrascaXangai, rank: 2 },
+    { name: 'Nagasaki', ll: NAGASAKI, ch: 24, date: 'escala', note: 'O vapor de Xangai para aqui antes de Yokohama.', path: seg.xangaiNagasaki, rank: 2 },
+    { name: 'Yokohama', ll: YOKO, ch: 24, date: '14 nov, de manhã', note: 'No horário. Embarca no General Grant às 18h30.', path: seg.nagasakiYoko, rank: 1 },
+    { name: 'Meridiano 180', ll: MERIDIANO, ch: 24, date: '23 nov', note: 'Metade do globo, contando por meridianos.', note37: 'Viajando para o leste, aqui Fogg passa a contar um dia a mais que Londres, sem saber.', path: seg.yokoMeridiano, rank: 2 },
+    { name: 'São Francisco', ll: SF, ch: 24, date: '3 dez, 7h', note: 'Sem ganhar nem perder um dia.', path: seg.meridianoSF, rank: 1 },
+    { name: 'Oakland', ll: OAKLAND, ch: 25, date: '3 dez, 18h', note: 'Partida do expresso do Pacífico.', path: seg.sfOakland, rank: 4 },
+    { name: 'Sacramento', ll: SACRAMENTO, ch: 26, date: 'por volta da meia-noite', path: seg.oaklandSacramento, rank: 3 },
+    { name: 'Cisco', ll: CISCO, ch: 26, date: '4 dez, 7h', note: 'Na Sierra Nevada.', path: seg.sacramentoCisco, rank: 4 },
+    { name: 'Reno', ll: RENO, ch: 26, date: '4 dez, meio-dia', note: 'Vinte minutos para almoçar.', path: seg.ciscoReno, rank: 2 },
+    { name: 'Bisões', ll: BISOES, ch: 26, date: '4 dez, 15h', note: 'Uma manada de dez a doze mil cabeças bloqueia a linha por três horas. Posição aproximada.', path: seg.renoBisoes, rank: 3 },
+    { name: 'Entrada em Utah', ll: UTAH, ch: 26, date: '4 dez, 21h30', path: seg.bisoesUtah, rank: 2 },
+    { name: 'Grande Lago Salgado', ll: LAGO, ch: 27, date: '6 dez, 12h30', note: 'O trem alcança a ponta noroeste do lago.', path: seg.utahLago, rank: 3 },
+    { name: 'Ogden', ll: OGDEN, ch: 27, date: '6 dez, 14h', note: 'Parada longa; dá tempo de ir a Salt Lake City pelo ramal.', path: seg.lagoOgden, rank: 2 },
+    { name: 'Salt Lake City', ll: SLC, ch: 27, date: '6 dez, 15h', note: 'Passeio pela cidade dos mórmons.', path: seg.ogdenSLC, rank: 3 },
+    { name: 'Fort Bridger', ll: FORTBRIDGER, ch: 28, date: '6 dez, 22h', path: seg.ogdenFortBridger, rank: 3 },
+    { name: 'Green River', ll: GREENRIVER, ch: 28, date: '7 dez', note: 'Aouda reconhece o coronel Proctor na plataforma.', path: seg.fortBridgerGreen, rank: 3 },
+    { name: 'Passo Bridger', ll: PASSO, ch: 28, date: '7 dez, 11h', note: 'Divisor de águas entre os dois oceanos. Posição aproximada.', path: seg.greenPasso, rank: 3 },
+    { name: 'Ponte de Medicine Bow', ll: MEDBOW, ch: 28, date: '7 dez, à tarde', note: 'O trem cruza a ponte abalada a toda velocidade, e ela desaba logo depois.', path: seg.passoMedBow, rank: 2 },
+    { name: 'Evans Pass', ll: EVANS, ch: 29, date: '7 dez, à tarde', note: 'O ponto mais alto da ferrovia.', path: seg.medBowEvans, rank: 3 },
+    { name: 'Julesburg', ll: JULESBURG, ch: 29, date: '7 dez, 23h', path: seg.evansJulesburg, rank: 4 },
+    { name: 'North Platte', ll: NPLATTE, ch: 29, date: '8 dez, 9h', path: seg.julesburgNPlatte, rank: 3 },
+    { name: 'Plum Creek', ll: PLUMCREEK, ch: 29, date: '8 dez, 11h', note: 'Fogg e Proctor começam o duelo dentro do trem.', path: seg.nplattePlum, rank: 3 },
+    { name: 'Ataque ao trem', ll: ATAQUE, ch: 29, date: '8 dez', note: 'Os dacotas atacam; Passepartout desengata a locomotiva. Posição aproximada.', path: seg.plumAtaque, rank: 4 },
+    { name: 'Forte Kearney', ll: KEARNEY, ch: 29, date: '8 dez', note: 'O trem para quase em frente à estação.', path: seg.ataqueKearney, rank: 2 },
+    { name: 'Resgate', ll: COMBATE, ch: 30, date: '9 dez, de manhã', note: 'Combate umas dez milhas ao sul de Kearney. Posição aproximada.', path: seg.kearneyCombate, rank: 4 },
+    { name: 'Omaha', ll: OMAHA, ch: 31, date: '9 dez, 13h', note: 'Chegada no trenó a vela de Mudge, cortando em linha reta a curva da ferrovia.', path: seg.kearneyOmahaTreno, rank: 2 },
+    { name: 'Chicago', ll: CHICAGO, ch: 31, date: '10 dez, 16h', path: seg.omahaChicago, rank: 2 },
+    { name: 'Nova York', ll: NY, ch: 31, date: '11 dez, 23h15', note: 'O China tinha partido 45 minutos antes.', path: seg.chicagoNY, rank: 1 },
+    { name: 'Henrietta sem madeira', ll: HENRIETTA, ch: 33, date: '18–19 dez', note: 'Sem carvão, queimam cabines, mastros e vergas. Posição aproximada.', path: seg.nyQueenstown, rank: 3 },
+    { name: 'Queenstown', ll: QUEENSTOWN, ch: 33, date: '21 dez, 1h', note: 'Fogg larga o navio e pega o trem do correio.', path: seg.henriettaQueenstown, rank: 2 },
+    { name: 'Dublin', ll: DUBLIN, ch: 33, date: '21 dez, ao amanhecer', path: seg.queenstownDublin, rank: 2 },
+    { name: 'Liverpool', ll: LIVERPOOL, ch: 33, date: '21 dez, 11h40', note: 'Faltam nove horas para o prazo.', path: seg.dublinLiverpool, rank: 1 },
+    { name: 'Londres, de volta', ll: LON, ch: 34, date: '21 dez, 20h50 (pelas contas dele)', note: 'Cinco minutos atrasado, pensa ele.', note37: 'Na verdade era sexta, 20 de dezembro: quase um dia inteiro adiantado.', path: seg.liverpoolLondres, rank: 4 }
+  ];
+  // Paradas de Passepartout enquanto está separado do patrão
+  const ppStops = [
+    { name: 'Fumadouro de ópio', ll: FUMADOURO, ch: 19, date: '6 nov, à noite', note: 'Fix embebeda Passepartout e o deixa dopado de ópio.', rank: 3 },
+    { name: 'Yokohama (Passepartout)', ll: YOKO_PP, ch: 22, date: '13 nov', note: 'Chega no Carnatic, sem dinheiro, e passa o dia andando pela cidade.', path: seg.hkYoko, rank: 4 },
+    { name: 'Circo do Batulcar', ll: YOKO_PP, ch: 23, date: '14 nov', note: 'Entra para a trupe e derruba a pirâmide humana ao ver o patrão na plateia.', rank: 4 },
+    { name: 'Levado pelos dacotas', ll: COMBATE, ch: 30, date: '8–9 dez', note: 'Passepartout e dois passageiros são levados para o sul, até o resgate. Posição aproximada.', path: seg.ataqueCombate, rank: 4 }
+  ];
+  const planOnly = [
+    { name: 'Yokohama', ll: YOKO, until: 24, note: 'Pelo plano, conexão com o vapor de São Francisco.' },
+    { name: 'São Francisco', ll: SF, until: 24, note: 'Dia 64 pelo plano.' },
+    { name: 'Nova York', ll: NY, until: 31, note: 'Fogg conta embarcar aqui em 11 de dezembro.' },
+    { name: 'Liverpool', ll: LIVERPOOL, until: 33, note: 'Desembarque para o trem até Londres.', rank: 2 }
+  ];
+
+  // Situação no fim de cada capítulo, até onde o leitor sabe
+  const nowByCh = {
+    1: { ll: LON, t: T(10, 2, 11), where: 'Em Londres, em Saville Row', date: '2 de outubro' },
+    2: { ll: LON, t: T(10, 2, 11, 30), where: 'Em Londres, em Saville Row', date: '2 de outubro' },
+    3: { ll: LON, t: T(10, 2, 19), where: 'No Reform Club, apostando 20 mil libras', date: '2 de outubro' },
+    4: { ll: LON, t: T(10, 2, 20, 45), where: 'Partindo de Charing Cross', date: '2 de outubro, 20h45' },
+    5: { ll: PARIS, t: T(10, 3, 7, 20), where: 'A caminho, enquanto Londres aposta contra ele', date: '3 de outubro', vague: true },
+    6: { arr: true, ll: SUEZ, t: T(10, 9, 11), where: 'Chegando a Suez', date: '9 de outubro, 11h' },
+    7: { ll: SUEZ, t: T(10, 9, 12), where: 'Em Suez', date: '9 de outubro' },
+    8: { ll: SUEZ, t: T(10, 9, 13), where: 'Em Suez', date: '9 de outubro' },
+    9: { arr: true, ll: BOMBAIM, t: T(10, 20, 16, 30), where: 'Chegando a Bombaim', date: '20 de outubro, 16h30' },
+    10: { ll: BOMBAIM, t: T(10, 20, 20), where: 'Saindo de Bombaim no trem para Calcutá', date: '20 de outubro, 20h' },
+    11: { ll: KHOLBY, t: T(10, 22, 8), where: 'Em Kholby, onde os trilhos acabam', date: '22 de outubro, 8h' },
+    12: { ll: BANGALO, t: T(10, 22, 20), where: 'De elefante, num bangalô ao pé dos Vindhias', date: '22 de outubro, 20h' },
+    13: { ll: PILLAJI, t: T(10, 24, 5), where: 'No pagode de Pillaji', date: '24 de outubro, antes do amanhecer' },
+    14: { arr: true, ll: CALCUTA, t: T(10, 25, 7), where: 'Chegando a Calcutá', date: '25 de outubro, 7h' },
+    15: { ll: CALCUTA, t: T(10, 25, 12), where: 'Embarcando no Rangoon em Calcutá', date: '25 de outubro' },
+    16: { ll: [95.5, 7.6], t: T(10, 30, 6), where: 'No Rangoon, entre as Andaman e Malaca (posição aproximada)', date: '30 de outubro', vague: true },
+    17: { arr: true, ll: SINGAPURA, t: T(10, 31, 4), where: 'Chegando a Singapura', date: '31 de outubro, 4h' },
+    18: { arr: true, ll: HK, t: T(11, 6, 6), where: 'Chegando a Hong Kong', date: '6 de novembro' },
+    19: { ll: HK, t: T(11, 6, 20), where: 'Em Hong Kong', date: '6 de novembro, à noite',
+          pp: { ll: FUMADOURO, where: 'Dopado num fumadouro de ópio' } },
+    20: { ll: HK, t: T(11, 7, 15, 10), where: 'Zarpando de Hong Kong na Tankadère', date: '7 de novembro, 15h10',
+          pp: { ll: FUMADOURO, where: 'Desaparecido; visto pela última vez no fumadouro', vague: true } },
+    21: { ll: XANGAI, t: T(11, 11, 19), where: 'Diante de Xangai, disparando o canhão', date: '11 de novembro, 19h',
+          pp: { ll: FUMADOURO, where: 'Desaparecido; visto pela última vez no fumadouro', vague: true } },
+    22: { ll: XANGAI, t: T(11, 13, 8), where: 'Último ponto conhecido: diante de Xangai', date: '11 de novembro', vague: true,
+          pp: { ll: YOKO_PP, where: 'Sozinho em Yokohama, sem dinheiro (13 de novembro)' } },
+    23: { ll: YOKO, t: T(11, 14, 18, 30), where: 'Em Yokohama, embarcando no General Grant', date: '14 de novembro, 18h30',
+          pp: { ll: YOKO_PP, where: 'No circo do Batulcar, até achar o patrão na plateia' } },
+    24: { arr: true, ll: SF, t: T(12, 3, 7), where: 'Chegando a São Francisco', date: '3 de dezembro, 7h' },
+    25: { ll: OAKLAND, t: T(12, 3, 18), where: 'Saindo de Oakland no expresso', date: '3 de dezembro, 18h' },
+    26: { ll: UTAH, t: T(12, 4, 21, 30), where: 'Entrando em Utah, depois da Sierra Nevada e dos bisões', date: '4 de dezembro, 21h30' },
+    27: { ll: OGDEN, t: T(12, 6, 16), tPlan: T(12, 5, 16), where: 'De volta ao trem em Ogden, depois de visitar Salt Lake City', date: '6 de dezembro, 16h', skip: true },
+    28: { ll: MEDBOW, t: T(12, 7, 16), tPlan: T(12, 6, 16), where: 'Logo depois da ponte de Medicine Bow, que desabou atrás do trem', date: '7 de dezembro, à tarde', skip: true },
+    29: { ll: KEARNEY, t: T(12, 8, 11, 30), tPlan: T(12, 7, 11, 30), skip: true, where: 'Na estação do forte Kearney, depois do ataque ao trem', date: '8 de dezembro',
+          pp: { ll: ATAQUE, where: 'Desaparecido; levado pelos dacotas', vague: true } },
+    30: { ll: KEARNEY, t: T(12, 9, 7, 30), tPlan: T(12, 8, 7, 30), skip: true, where: 'De volta a Kearney com Passepartout; o trem já partiu', date: '9 de dezembro, 7h30' },
+    31: { arr: true, ll: NY, t: T(12, 11, 23, 15), where: 'No cais de Nova York', date: '11 de dezembro, 23h15',
+          gap: 'O China, que estava no plano, partiu às 21h: 45 minutos antes de ele chegar.' },
+    32: { ll: NY, t: T(12, 12, 9), where: 'Zarpando de Nova York no Henrietta', date: '12 de dezembro, 9h' },
+    33: { arr: true, ll: LIVERPOOL, t: T(12, 21, 11, 40), where: 'No cais de Liverpool', date: '21 de dezembro, 11h40',
+          gap: 'Faltam nove horas para o prazo, e o trem até Londres leva seis.' },
+    34: { arr: true, ll: LON, t: T(12, 21, 20, 50), where: 'Chegando a Londres', date: '21 de dezembro, 20h50, pelas contas dele',
+          gap: 'Cinco minutos depois do prazo, pelo calendário que ele levou na viagem.' },
+    35: { ll: LON, t: T(12, 22, 12), where: 'Em casa, em Saville Row, dando a aposta por perdida', date: 'domingo, pelas contas dele',
+          gap: 'Pelo calendário dele, o prazo já passou.' },
+    36: { ll: LON, t: T(12, 22, 20, 40), where: 'Em Saville Row, enquanto os colegas o esperam no Reform Club', date: 'sábado à noite, pelo calendário de Londres',
+          gap: 'Para os colegas, o prazo ainda não acabou.' },
+    37: { ll: LON, t: T(12, 22, 20, 45), where: 'No Reform Club, às 20h45 em ponto', date: 'sábado, 21 de dezembro',
+          gap: 'No prazo. Ele tinha chegado a Londres na sexta, 20, quase um dia antes do que pensava.' }
+  };
+
+  const balance = [
+    { label: 'Suez', ch: 6, h: 0 },
+    { label: 'Áden', ch: 9, h: 15 },
+    { label: 'Bombaim', ch: 9, h: 48 },
+    { label: 'Calcutá', ch: 14, h: 0 },
+    { label: 'Singapura', ch: 17, h: 12 },
+    { label: 'H. Kong', ch: 18, h: -24 },
+    { label: 'Yokohama', ch: 24, h: 0 },
+    { label: 'S. Francisco', ch: 24, h: 0 },
+    { label: 'N. York', ch: 31, h: -17 },
+    { label: 'Londres', ch: 34, h: -0.1, text: '−5 min', later: { ch: 37, h: 23.9, text: '+23h55' } }
+  ];
+
+  // Dinheiro
+  const GBP_TODAY = 147.15, BRL_PER_GBP = 6.7865, USD_PER_GBP = 1.3337, USD1872 = 4.86;
+  const usd = v => v / USD1872;
+  // kind: out (gasto), in (recebido), info (contexto), none (gasto sem valor no texto)
+  const money = [
+    { ch: 3, kind: 'info', what: 'Aposta 20 mil libras, metade da fortuna, deixadas no banco Baring', gbp: 20000,
+      sub: 'Se perder, os colegas do Reform Club ficam com elas.' },
+    { ch: 4, kind: 'info', what: 'Leva a outra metade em notas na sacola de viagem', gbp: 20000 },
+    { ch: 4, kind: 'out', what: 'Dá à mendiga de Charing Cross os 20 guinéus que acabou de ganhar no whist', gbp: 21 },
+    { ch: 4, kind: 'none', what: 'Duas passagens de primeira classe para Paris' },
+    { ch: 5, kind: 'info', what: 'Lorde Albermale aposta 5 mil libras a favor dele', gbp: 5000 },
+    { ch: 7, kind: 'none', what: 'Taxa do visto no consulado de Suez' },
+    { ch: 8, kind: 'none', what: 'Promete uma recompensa ao comandante do Mongólia se chegar adiantado a Bombaim' },
+    { ch: 11, kind: 'out', what: 'Compra o elefante Kiouni', gbp: 2000,
+      sub: 'O dono recusou aluguel de 10, 20 e 40 libras por hora; Fogg ofereceu 1.000, 1.200, 1.500, 1.800 e fechou em 2.000.' },
+    { ch: 11, kind: 'none', what: 'Contrata o guia parse' },
+    { ch: 14, kind: 'out', what: 'Peliça de lontra para Aouda, comprada por Passepartout em Allahabad', gbp: 75,
+      sub: 'Mais um vestido escocês e um manto, sem preço no texto.' },
+    { ch: 14, kind: 'info', what: 'Dá o elefante de presente ao guia', gbp: 2000, sub: 'Já contado na compra.' },
+    { ch: 15, kind: 'out', what: 'Caução em Calcutá, perdida ao embarcar', gbp: 2000,
+      sub: 'Condenados a multas de 150 e 300 libras e a prisão pelo caso do pagode, pagam 1.000 libras de fiança cada e vão embora.' },
+    { ch: 20, kind: 'out', what: 'Adiantamento a John Bunsby pela Tankadère', gbp: 200,
+      sub: 'Combinado: 100 libras por dia, mais 200 de prêmio se chegasse a tempo.' },
+    { ch: 23, kind: 'none', what: 'Um punhado de notas para acalmar o Batulcar pela pirâmide desabada' },
+    { ch: 24, kind: 'out', what: 'Acerta a conta com Bunsby diante de Xangai', gbp: 550 },
+    { ch: 25, kind: 'out', what: 'Carruagem do cais ao Hotel Internacional, em São Francisco', gbp: usd(3), orig: 'US$ 3' },
+    { ch: 30, kind: 'out', what: 'Recompensa aos 30 soldados que resgatam Passepartout', gbp: 1000 },
+    { ch: 31, kind: 'none', what: 'Uma gratificação generosa a Mudge pelo trenó a vela' },
+    { ch: 32, kind: 'out', what: 'Passagens no Henrietta: 2 mil dólares por pessoa, para quatro', gbp: usd(8000), orig: 'US$ 8.000',
+      sub: 'Inclui a do Fix, que Fogg paga.' },
+    { ch: 33, kind: 'none', what: 'Suborno da tripulação do Henrietta para mudar o rumo' },
+    { ch: 33, kind: 'out', what: 'Compra o Henrietta para queimar a madeira', gbp: usd(60000), orig: 'US$ 60.000',
+      sub: 'Speedy dizia que o navio valia 50 mil dólares; ainda fica com o casco e a máquina.' },
+    { ch: 34, kind: 'none', what: 'Trem especial de Liverpool a Londres e gratificação ao maquinista' },
+    { ch: 35, kind: 'info', what: 'Dá a aposta por perdida: deve as 20 mil libras do Baring aos colegas', gbp: 20000 },
+    { ch: 37, kind: 'out', what: 'Promete 100 libras ao cocheiro para chegar ao Reform Club', gbp: 100 },
+    { ch: 37, kind: 'in', what: 'Ganha a aposta', gbp: 20000 },
+    { ch: 37, kind: 'info', what: 'Divide as cerca de mil libras que sobraram entre Passepartout e Fix', gbp: 1000,
+      sub: 'Do Passepartout, desconta o gás que ficou aceso em Saville Row durante 1.920 horas.' }
+  ];
+  const bookTotals = [
+    { ch: 15, gbp: 5000, label: 'mais de £5.000', who: 'narrador' },
+    { ch: 24, gbp: 5000, label: 'mais de £5.000', who: 'Fix' },
+    { ch: 32, gbp: 7000, label: 'mais de £7.000', who: 'Fix' },
+    { ch: 33, gbp: 19800, label: 'quase £20.000', who: 'Fix' },
+    { ch: 37, gbp: 19000, label: 'cerca de £19.000', who: 'narrador' }
+  ];
+  const spentUpTo = ch => money.filter(m => m.kind === 'out' && m.ch <= ch).reduce((a, m) => a + m.gbp, 0);
+  const nf = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 });
+  const fmtGBP = v => '£' + nf.format(v < 10 ? Math.round(v * 10) / 10 : Math.round(v));
+  function compact(v, cur) {
+    if (v >= 1e9) return cur + ' ' + (v / 1e9).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' bilhões';
+    if (v >= 1e6) { const r = Math.round(v / 1e5) / 10; return cur + ' ' + r.toLocaleString('pt-BR') + (r >= 2 ? ' milhões' : ' milhão'); }
+    if (v >= 1e4) return cur + ' ' + nf.format(Math.round(v / 1e3)) + ' mil';
+    return cur + ' ' + nf.format(Math.round(v / 10) * 10);
+  }
+  const today = gbp => compact(gbp * GBP_TODAY * BRL_PER_GBP, 'R$') + ', ou ' + compact(gbp * GBP_TODAY * USD_PER_GBP, 'US$');
+
+  function renderMoney() {
+    const ch = state.ch;
+    const spent = spentUpTo(ch);
+    const tot = document.getElementById('moneyTotal');
+    tot.innerHTML = '';
+    const p = document.createElement('p'); p.className = 'money-total';
+    if (ch < 3) {
+      p.append('Ainda não se falou de dinheiro: Fogg é rico, mas ninguém sabe de onde vem a fortuna.');
+    } else if (ch < 4) {
+      p.append('Ainda em Londres. Nada gasto.');
+    } else {
+      const b = document.createElement('b'); b.textContent = fmtGBP(spent);
+      p.append('Gasto até aqui, contando só o que tem valor no texto: ', b);
+      const t = document.createElement('span'); t.className = 'money-today'; t.textContent = 'Hoje seriam ' + today(spent) + '.';
+      p.appendChild(t);
+      const bt = bookTotals.filter(x => x.ch <= ch).pop();
+      if (bt) {
+        const t2 = document.createElement('span'); t2.className = 'money-today';
+        t2.textContent = 'Pela conta do ' + bt.who + ' no capítulo ' + TITLES[bt.ch][0] + ': ' + bt.label + '.';
+        p.appendChild(t2);
+      }
+      if (ch < 37) {
+        const t3 = document.createElement('span'); t3.className = 'money-today';
+        t3.textContent = 'Sobram no máximo ' + fmtGBP(Math.max(0, 20000 - spent)) + ' na sacola.';
+        p.appendChild(t3);
+      }
+    }
+    tot.appendChild(p);
+
+    const ul = document.getElementById('moneyItems');
+    ul.innerHTML = '';
+    const items = money.filter(m => m.ch === ch);
+    if (!items.length) {
+      const li = document.createElement('li'); li.className = 'money-empty'; li.style.border = '0';
+      li.textContent = 'Neste capítulo, nenhum gasto do Fogg com valor no texto.';
+      ul.appendChild(li);
+    }
+    items.forEach(m => {
+      const li = document.createElement('li');
+      const w = document.createElement('span'); w.textContent = m.what;
+      const a = document.createElement('span');
+      if (m.kind === 'none') { a.className = 'amt none'; a.textContent = 'sem valor'; }
+      else {
+        a.className = 'amt' + (m.kind === 'in' ? ' in' : '');
+        a.textContent = (m.kind === 'in' ? '+' : m.kind === 'out' ? '−' : '') + (m.orig || fmtGBP(m.gbp));
+      }
+      li.append(w, a);
+      if (m.kind !== 'none') {
+        const sub = document.createElement('span'); sub.className = 'sub';
+        sub.textContent = (m.orig ? '≈ ' + fmtGBP(m.gbp) + ' da época. ' : '') + 'Hoje: ' + today(m.gbp) + '.' + (m.sub ? ' ' + m.sub : '');
+        li.appendChild(sub);
+      } else if (m.sub) {
+        const sub = document.createElement('span'); sub.className = 'sub'; sub.textContent = m.sub; li.appendChild(sub);
+      }
+      ul.appendChild(li);
+    });
+    renderSpendChart();
+  }
+
+  function renderSpendChart() {
+    const svg = d3.select('#spend');
+    svg.selectAll('*').remove();
+    const w = 340, h = 160, m = { l: 40, r: 14, t: 16, b: 26 };
+    const x = d3.scaleLinear().domain([1, MAX_CH]).range([m.l, w - m.r]);
+    const y = d3.scaleLinear().domain([0, 21000]).range([h - m.b, m.t]);
+    const g = svg.append('g').style('font-family', '"Spectral", Georgia, serif');
+    [0, 5000, 10000, 15000, 20000].forEach(v => {
+      g.append('line').attr('x1', m.l).attr('x2', w - m.r).attr('y1', y(v)).attr('y2', y(v))
+        .attr('stroke', 'var(--rule)').attr('stroke-width', v === 0 ? 1.4 : 1).attr('stroke-dasharray', v === 0 || v === 20000 ? null : '2 3');
+      g.append('text').attr('x', m.l - 6).attr('y', y(v)).attr('dy', '0.32em').attr('text-anchor', 'end')
+        .attr('font-size', 11).attr('fill', 'var(--muted)').text(v ? '£' + v / 1000 + 'k' : '0');
+    });
+    g.append('text').attr('x', m.l + 4).attr('y', y(20000) - 5).attr('text-anchor', 'start')
+      .attr('font-size', 11).attr('fill', 'var(--muted)').text('a sacola inteira');
+    [1, 10, 20, 30, MAX_CH].forEach(c => {
+      g.append('text').attr('x', x(c)).attr('y', h - 8).attr('text-anchor', c === MAX_CH ? 'end' : c === 1 ? 'start' : 'middle')
+        .attr('font-size', 10.5).attr('fill', 'var(--muted)').text(c === 1 ? 'cap. I' : TITLES[c][0]);
+    });
+    g.append('line').attr('x1', x(state.ch)).attr('x2', x(state.ch)).attr('y1', m.t).attr('y2', h - m.b)
+      .attr('stroke', 'var(--ink)').attr('stroke-opacity', 0.35).attr('stroke-dasharray', '2 3');
+    if (state.ch >= 4) {
+      const pts = d3.range(4, state.ch + 1).map(c => [c, spentUpTo(c)]);
+      g.append('path').attr('d', d3.line().curve(d3.curveStepAfter).x(d => x(d[0])).y(d => y(d[1]))(pts))
+        .attr('fill', 'none').attr('stroke', 'var(--real)').attr('stroke-width', 2);
+      const last = pts[pts.length - 1];
+      g.append('circle').attr('cx', x(last[0])).attr('cy', y(last[1])).attr('r', 4)
+        .attr('fill', 'var(--real)').attr('stroke', 'var(--panel)').attr('stroke-width', 1.5);
+    }
+    bookTotals.filter(b => b.ch <= state.ch).forEach(b => {
+      g.append('circle').attr('cx', x(b.ch)).attr('cy', y(b.gbp)).attr('r', 4.5)
+        .attr('fill', 'var(--panel)').attr('stroke', 'var(--plan)').attr('stroke-width', 2)
+        .append('title').text(b.label + ', pela conta do ' + b.who + ' (cap. ' + TITLES[b.ch][0] + ')');
+    });
+  }
+
+  // Estado
+  const state = { ch: 1, showPlan: true, showReal: true, showPP: true, sel: -1, rot: [-62, -22, 0], zoom: 1 };
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Globo
+  const canvas = document.getElementById('globe');
+  const ctx = canvas.getContext('2d');
+  const projection = d3.geoOrthographic().clipAngle(90).precision(0.3);
+  const path = d3.geoPath(projection, ctx);
+  const graticule = d3.geoGraticule10();
+  let W = 0, H = 0, R0 = 1, land = null, landIsMerged = true, colors = {};
+
+  function readColors() {
+    const cs = getComputedStyle(document.documentElement);
+    ['ocean', 'land', 'coast', 'grat', 'plan', 'real', 'pp', 'ink', 'halo', 'muted'].forEach(k => {
+      colors[k] = cs.getPropertyValue('--' + k).trim();
+    });
+  }
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    W = r.width; H = r.height;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    R0 = Math.max(80, Math.min(W, H) * 0.44);
+    draw();
+  }
+
+  let frame = 0;
+  function draw() {
+    if (frame) return;
+    frame = requestAnimationFrame(() => { frame = 0; render(); });
+  }
+
+  const line = pts => ({ type: 'LineString', coordinates: pts });
+  const visible = ll => d3.geoDistance(ll, [-state.rot[0], -state.rot[1]]) < Math.PI / 2 - 0.02;
+
+  function strokeRoute(pts, color, width) {
+    ctx.beginPath(); path(line(pts));
+    ctx.strokeStyle = colors.halo; ctx.lineWidth = width + 3; ctx.stroke();
+    ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
+  }
+
+  let hits = [];
+  function render() {
+    projection.scale(R0 * state.zoom).translate([W / 2, H / 2]).rotate(state.rot);
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.beginPath(); path({ type: 'Sphere' });
+    ctx.fillStyle = colors.ocean; ctx.fill();
+    ctx.beginPath(); path(graticule);
+    ctx.strokeStyle = colors.grat; ctx.lineWidth = 1; ctx.stroke();
+    if (land) {
+      ctx.beginPath(); path(land);
+      ctx.fillStyle = colors.land; ctx.fill();
+      ctx.strokeStyle = landIsMerged ? colors.coast : colors.land;
+      ctx.lineWidth = 0.7; ctx.stroke();
+    }
+    ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+    const now = nowByCh[state.ch];
+    const shown = stops.filter(s => s.ch <= state.ch);
+    const ppShown = ppStops.filter(s => s.ch <= state.ch);
+
+    if (state.showReal) shown.forEach(s => { if (s.path) strokeRoute(s.path, colors.real, 2.6); });
+
+    if (state.showPlan) {
+      plan.forEach((leg, i) => {
+        ctx.beginPath(); path(line(leg.pts));
+        ctx.setLineDash([7, 5]);
+        ctx.strokeStyle = colors.plan;
+        ctx.globalAlpha = state.sel === -1 || state.sel === i ? 1 : 0.45;
+        ctx.lineWidth = state.sel === i ? 2.8 : 2;
+        ctx.stroke();
+      });
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+    if (state.showPP) ppShown.forEach(s => { if (s.path) strokeRoute(s.path, colors.pp, 2.2); });
+
+    ctx.beginPath(); path({ type: 'Sphere' });
+    ctx.strokeStyle = colors.coast; ctx.globalAlpha = 0.5; ctx.lineWidth = 1; ctx.stroke(); ctx.globalAlpha = 1;
+
+    hits = [];
+    const labels = [];
+    const z = state.zoom;
+    const labelOk = rank => rank === 1 || (rank === 2 && z >= 2.2) || (rank === 3 && z >= 6) || (rank === 4 && z >= 18) || (rank === 5 && z >= 120);
+    const dot = (ll, r, fill) => {
+      const [x, y] = projection(ll);
+      ctx.beginPath(); ctx.arc(x, y, r, 0, 2 * Math.PI);
+      ctx.fillStyle = fill; ctx.fill();
+      ctx.strokeStyle = colors.halo; ctx.lineWidth = 1.5; ctx.stroke();
+      return [x, y];
+    };
+
+    if (state.showPlan) {
+      planOnly.forEach(p => {
+        if ((p.until && state.ch >= p.until) || !visible(p.ll)) return;
+        const [x, y] = projection(p.ll);
+        ctx.beginPath(); ctx.arc(x, y, 4, 0, 2 * Math.PI);
+        ctx.fillStyle = colors.ocean; ctx.fill();
+        ctx.strokeStyle = colors.plan; ctx.lineWidth = 2; ctx.stroke();
+        if (labelOk(p.rank || 1)) labels.push({ text: p.name, x, y, color: colors.plan, pri: (p.rank || 1) + 0.5 });
+        hits.push({ x, y, kind: 'plan', s: p });
+      });
+    }
+    if (state.showReal) {
+      shown.forEach(s => {
+        if (!visible(s.ll)) return;
+        const [x, y] = dot(s.ll, s.rank === 1 ? 4.5 : 3.5, colors.real);
+        if (labelOk(s.rank)) labels.push({ text: s.name, x, y, color: colors.ink, pri: s.rank });
+        hits.push({ x, y, kind: 'real', s });
+      });
+    }
+    if (state.showPP) {
+      ppShown.forEach(s => {
+        if (!visible(s.ll)) return;
+        const [x, y] = dot(s.ll, 3.5, colors.pp);
+        hits.push({ x, y, kind: 'pp', s });
+      });
+    }
+
+    // Marcadores do momento: Fogg, onde o plano o queria e Passepartout, se estiverem separados
+    const pl = planAt(now.tPlan || now.t);
+    if (state.showPlan && state.showReal && d3.geoDistance(pl.ll, now.ll) > 0.0005) {
+      ctx.beginPath(); path(line([now.ll, pl.ll]));
+      ctx.setLineDash([2, 4]); ctx.strokeStyle = colors.ink; ctx.globalAlpha = 0.6; ctx.lineWidth = 1.3; ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+    if (state.showPlan && visible(pl.ll)) {
+      const [x, y] = projection(pl.ll);
+      ctx.beginPath(); ctx.arc(x, y, 9, 0, 2 * Math.PI);
+      ctx.fillStyle = colors.halo; ctx.fill();
+      ctx.strokeStyle = colors.plan; ctx.lineWidth = 3; ctx.stroke();
+      labels.push({ text: 'Plano', x, y, color: colors.plan, pri: 0.2 });
+      hits.push({ x, y, kind: 'plan', s: { name: 'Onde o plano previa', note: capitalize(pl.text) + '.' } });
+    }
+    if (state.showPP && now.pp && visible(now.pp.ll)) {
+      const [x, y] = projection(now.pp.ll);
+      ctx.beginPath(); ctx.arc(x, y, 8, 0, 2 * Math.PI);
+      ctx.strokeStyle = colors.pp; ctx.lineWidth = 2; ctx.setLineDash(now.pp.vague ? [3, 3] : []); ctx.stroke(); ctx.setLineDash([]);
+      labels.push({ text: 'Passepartout', x, y, color: colors.pp, pri: 0.15 });
+      hits.push({ x, y, kind: 'pp', s: { name: 'Passepartout', note: now.pp.where + '.' } });
+    }
+    if (state.showReal && visible(now.ll)) {
+      const [x, y] = dot(now.ll, 5, colors.real);
+      ctx.beginPath(); ctx.arc(x, y, 11, 0, 2 * Math.PI);
+      ctx.strokeStyle = colors.real; ctx.lineWidth = 1.8; ctx.setLineDash(now.vague ? [3, 3] : []); ctx.stroke(); ctx.setLineDash([]);
+      labels.push({ text: 'Fogg', x, y, color: colors.real, pri: 0.1 });
+      hits.push({ x, y, kind: 'real', s: { name: 'Fogg', date: now.date, note: now.where + '.' } });
+    }
+
+    ctx.font = '15px "IM Fell English", Georgia, serif';
+    const placed = [];
+    labels.sort((a, b) => a.pri - b.pri).forEach(l => {
+      const w = ctx.measureText(l.text).width;
+      // tenta à direita, depois à esquerda, depois embaixo
+      const options = [[l.x + 9, l.y - 9], [l.x - 9 - w, l.y - 9], [l.x + 9, l.y + 13]];
+      for (const [tx, ty] of options) {
+        const box = [tx - 2, ty - 9, tx + w + 2, ty + 9];
+        if (placed.some(p => box[0] < p[2] && box[2] > p[0] && box[1] < p[3] && box[3] > p[1])) continue;
+        placed.push(box);
+        label(l.text, tx, ty, l.color);
+        break;
+      }
+    });
+  }
+
+  function label(text, tx, ty, color) {
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 4; ctx.strokeStyle = colors.halo; ctx.lineJoin = 'round';
+    ctx.strokeText(text, tx, ty);
+    ctx.fillStyle = color; ctx.fillText(text, tx, ty);
+  }
+  const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1);
+
+  // Arrastar, zoom e teclado
+  const pointers = new Map();
+  let pinchStart = null, dragMoved = false;
+  const degPerPx = () => (180 / Math.PI) / (R0 * state.zoom);
+  function setZoom(z) { state.zoom = Math.max(1, Math.min(300, z)); draw(); }
+
+  canvas.addEventListener('pointerdown', e => {
+    canvas.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    dragMoved = false;
+    stopFly();
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      pinchStart = { d: Math.hypot(a.x - b.x, a.y - b.y), z: state.zoom };
+    }
+  });
+  canvas.addEventListener('pointermove', e => {
+    const p = pointers.get(e.pointerId);
+    if (!p) { hover(e); return; }
+    const dx = e.clientX - p.x, dy = e.clientY - p.y;
+    p.x = e.clientX; p.y = e.clientY;
+    if (pointers.size === 2 && pinchStart) {
+      const [a, b] = [...pointers.values()];
+      setZoom(pinchStart.z * Math.hypot(a.x - b.x, a.y - b.y) / Math.max(1, pinchStart.d));
+      return;
+    }
+    if (Math.abs(dx) + Math.abs(dy) > 0) dragMoved = true;
+    const k = degPerPx();
+    state.rot[0] += dx * k;
+    state.rot[1] = Math.max(-90, Math.min(90, state.rot[1] - dy * k));
+    hideTip();
+    draw();
+  });
+  function endPointer(e) {
+    const wasTap = pointers.size === 1 && !dragMoved;
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) pinchStart = null;
+    if (wasTap && e.type === 'pointerup') hover(e, true);
+  }
+  canvas.addEventListener('pointerup', endPointer);
+  canvas.addEventListener('pointercancel', endPointer);
+  canvas.addEventListener('pointerleave', () => { if (!pointers.size) hideTip(); });
+  canvas.addEventListener('wheel', e => {
+    e.preventDefault(); stopFly();
+    setZoom(state.zoom * Math.exp(-e.deltaY * 0.0015));
+  }, { passive: false });
+  canvas.addEventListener('dblclick', () => { stopFly(); setZoom(state.zoom * 2); });
+  canvas.addEventListener('keydown', e => {
+    const step = 6 * Math.min(1, 2 / state.zoom) + 0.4;
+    const k = { ArrowLeft: [step, 0], ArrowRight: [-step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key];
+    if (k) {
+      e.preventDefault(); stopFly();
+      state.rot[0] += k[0];
+      state.rot[1] = Math.max(-90, Math.min(90, state.rot[1] + k[1]));
+      draw();
+    } else if (e.key === '+' || e.key === '=') { setZoom(state.zoom * 1.4); }
+    else if (e.key === '-') { setZoom(state.zoom / 1.4); }
+  });
+  document.getElementById('zin').onclick = () => { stopFly(); setZoom(state.zoom * 1.6); };
+  document.getElementById('zout').onclick = () => { stopFly(); setZoom(state.zoom / 1.6); };
+  document.getElementById('zreset').onclick = () => { selectLeg(-1); flyTo([-62, -22, 0], 1); };
+
+  const tip = document.getElementById('tip');
+  function hideTip() { tip.hidden = true; }
+  function hover(e, tap) {
+    const r = canvas.getBoundingClientRect();
+    const mx = e.clientX - r.left, my = e.clientY - r.top;
+    let best = null, bd = tap ? 22 : 12;
+    hits.forEach(h => { const d = Math.hypot(h.x - mx, h.y - my); if (d < bd) { bd = d; best = h; } });
+    if (!best) { hideTip(); return; }
+    const s = best.s;
+    tip.className = 'tip' + (best.kind === 'plan' ? ' plan' : '');
+    tip.style.borderLeftColor = best.kind === 'pp' ? 'var(--pp)' : '';
+    tip.innerHTML = '';
+    const strong = document.createElement('strong'); strong.textContent = s.name; tip.appendChild(strong);
+    if (s.date) {
+      const em = document.createElement('em');
+      em.textContent = s.date + (s.ch ? ', cap. ' + TITLES[s.ch][0] : '');
+      tip.appendChild(em);
+    }
+    const note = state.ch >= 37 && s.note37 ? s.note37 : s.note;
+    if (note) { const p = document.createElement('span'); p.textContent = note; tip.appendChild(p); }
+    tip.hidden = false;
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let left = best.x + 14, top = best.y + 14;
+    if (left + tw > W - 8) left = best.x - tw - 14;
+    if (top + th > H - 8) top = best.y - th - 14;
+    tip.style.left = Math.max(8, left) + 'px';
+    tip.style.top = Math.max(8, top) + 'px';
+  }
+
+  // Animação até um ponto
+  let flyTimer = null;
+  function stopFly() { if (flyTimer) { flyTimer.stop(); flyTimer = null; } }
+  function flyTo(rot, zoom) {
+    stopFly();
+    const target = rot.slice();
+    while (target[0] - state.rot[0] > 180) target[0] -= 360;
+    while (target[0] - state.rot[0] < -180) target[0] += 360;
+    if (reduceMotion) { state.rot = target; state.zoom = zoom; draw(); return; }
+    const ir = d3.interpolate(state.rot.slice(), target);
+    const z0 = Math.log(state.zoom), z1 = Math.log(zoom);
+    const span = Math.abs(target[0] - state.rot[0]);
+    const dur = 1100;
+    flyTimer = d3.timer(t => {
+      const k = d3.easeCubicInOut(Math.min(1, t / dur));
+      const dip = Math.sin(Math.PI * k) * Math.min(0.9, span / 200);
+      state.rot = ir(k);
+      state.zoom = Math.max(1, Math.exp(z0 + (z1 - z0) * k - dip));
+      render();
+      if (k >= 1) { state.zoom = zoom; render(); stopFly(); }
+    });
+  }
+  function focusOn(pts, maxZoom = 60, instant = false) {
+    const c = pts.length === 1 ? pts[0] : d3.geoCentroid(line(pts));
+    let maxD = 0;
+    pts.forEach(p => { maxD = Math.max(maxD, d3.geoDistance(p, c)); });
+    const radiusPx = Math.min(W, H) * 0.38;
+    const z = maxD >= Math.PI / 2 ? 1 : Math.max(1, Math.min(maxZoom, radiusPx / (R0 * Math.sin(Math.max(maxD, 0.004)))));
+    if (instant) { state.rot = [-c[0], -c[1], 0]; state.zoom = z; draw(); return; }
+    flyTo([-c[0], -c[1], 0], z);
+  }
+  function focusNow(instant) {
+    const now = nowByCh[state.ch];
+    const pts = [now.ll, planAt(now.tPlan || now.t).ll];
+    if (now.pp) pts.push(now.pp.ll);
+    focusOn(pts, 2.5, instant);
+  }
+
+  // Painel lateral
+  const legsEl = document.getElementById('legs');
+  function renderLegs() {
+    legsEl.innerHTML = '';
+    plan.forEach((leg, i) => {
+      const li = document.createElement('li');
+      if (state.sel === i) li.className = 'sel';
+      const entries = real[i].filter(r => r[0] <= state.ch);
+      const cur = entries[entries.length - 1];
+      const btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'leg';
+      btn.setAttribute('aria-pressed', state.sel === i ? 'true' : 'false');
+      const n = document.createElement('span'); n.className = 'leg-n'; n.textContent = i + 1;
+      const t = document.createElement('span'); t.className = 'leg-title'; t.textContent = leg.from + ' → ' + leg.to;
+      const b = document.createElement('span');
+      if (cur) { b.className = 'badge ' + cur[3]; b.textContent = cur[2]; }
+      else { b.className = 'badge none'; b.textContent = 'pela frente'; }
+      btn.append(n, t, b);
+      btn.addEventListener('click', () => { selectLeg(i); showStage(); focusOn(leg.pts); });
+      const body = document.createElement('div'); body.className = 'leg-body';
+      const pp = document.createElement('p');
+      pp.innerHTML = '<span class="k">Plano:</span> ';
+      pp.appendChild(document.createTextNode(leg.text));
+      body.appendChild(pp);
+      if (cur) {
+        const rp = document.createElement('p');
+        rp.innerHTML = '<span class="k">Real:</span> ';
+        rp.appendChild(document.createTextNode(cur[1]));
+        body.appendChild(rp);
+      }
+      if (leg.detour && state.ch >= leg.detour.minCh) {
+        const db = document.createElement('button');
+        db.type = 'button'; db.className = 'detour';
+        db.textContent = leg.detour.label;
+        db.addEventListener('click', () => { selectLeg(i); showStage(); focusOn(leg.detour.pts, 300); });
+        body.appendChild(db);
+      }
+      li.append(btn, body);
+      legsEl.appendChild(li);
+    });
+  }
+  function showStage() {
+    const st = document.querySelector('.stage');
+    const r = st.getBoundingClientRect();
+    if (r.bottom < 120 || r.top > window.innerHeight - 120) {
+      st.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    }
+  }
+  function selectLeg(i) { state.sel = i; renderLegs(); draw(); }
+
+  function fmtGap(km, lead) {
+    if (km < 40) return 'No ponto previsto pelo plano.';
+    const v = (km < 1000 ? Math.round(km / 10) * 10 : Math.round(km / 50) * 50).toLocaleString('pt-BR') + ' km';
+    if (lead === null) return 'Fora da rota do plano, a cerca de ' + v + ' de onde devia estar.';
+    const h = Math.abs(lead);
+    if (h < 3) return 'A cerca de ' + v + ' do ponto previsto, mas no ritmo do plano.';
+    const amount = h < 36 ? Math.round(h) + ' h' : (Math.round(h / 12) / 2).toLocaleString('pt-BR') + ' dias';
+    return 'Uns ' + v + ' e ' + amount + (lead > 0 ? ' à frente' : ' atrás') + ' do plano.';
+  }
+  function renderChapter() {
+    const [roman, title] = TITLES[state.ch];
+    document.getElementById('chNum').textContent = 'Capítulo ' + roman;
+    document.getElementById('chTitle').textContent = title;
+    document.getElementById('prev').disabled = state.ch <= 1;
+    document.getElementById('next').disabled = state.ch >= MAX_CH;
+
+    const now = nowByCh[state.ch];
+    const pl = planAt(now.tPlan || now.t);
+    const el = document.getElementById('now');
+    el.innerHTML = '';
+    const row = (cls, who, text, sub) => {
+      const li = document.createElement('li');
+      const d = document.createElement('span'); d.className = 'dot ' + cls;
+      const body = document.createElement('span');
+      const w = document.createElement('span'); w.className = 'who'; w.textContent = who + ': ';
+      body.append(w, document.createTextNode(text));
+      if (sub) { const g = document.createElement('span'); g.className = 'gap'; g.textContent = sub; body.appendChild(g); }
+      li.append(d, body);
+      el.appendChild(li);
+    };
+    const km = d3.geoDistance(now.ll, pl.ll) * 6371;
+    row('real', 'Fogg', now.where + ', ' + now.date + '.', now.gap ? now.gap : now.vague ? null : fmtGap(km, leadHours(now)) +
+      (now.skip ? ' O texto pula um dia entre os capítulos XXVI e XXVII, então a comparação conta as horas de viagem desde Oakland.' : ''));
+    row('plan', 'Pelo plano', capitalize(pl.text) + '.');
+    if (now.pp) row('pp', 'Passepartout', now.pp.where + '.');
+  }
+
+  function renderBalance() {
+    const svg = d3.select('#bal');
+    svg.selectAll('*').remove();
+    const w = 340, h = 150, m = { l: 34, r: 14, t: 18, b: 30 };
+    const x = d3.scalePoint().domain(balance.map(d => d.label)).range([m.l, w - m.r]).padding(0.3);
+    const y = d3.scaleLinear().domain([-30, 54]).range([h - m.b, m.t]);
+    const g = svg.append('g').style('font-family', '"Spectral", Georgia, serif');
+    [-24, 0, 24, 48].forEach(v => {
+      g.append('line').attr('x1', m.l).attr('x2', w - m.r).attr('y1', y(v)).attr('y2', y(v))
+        .attr('stroke', 'var(--rule)').attr('stroke-width', v === 0 ? 1.4 : 1)
+        .attr('stroke-dasharray', v === 0 ? null : '2 3');
+      g.append('text').attr('x', m.l - 6).attr('y', y(v)).attr('dy', '0.32em').attr('text-anchor', 'end')
+        .attr('font-size', 11).attr('fill', 'var(--muted)').text((v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v) + 'h');
+    });
+    const pts = balance.map(d => (d.later && state.ch >= d.later.ch ? Object.assign({}, d, d.later) : d));
+    const known = pts.filter(d => d.ch <= state.ch);
+    g.append('path')
+      .attr('d', d3.line().x(d => x(d.label)).y(d => y(d.h))(known))
+      .attr('fill', 'none').attr('stroke', 'var(--real)').attr('stroke-width', 2);
+    pts.forEach((d, i) => {
+      const on = d.ch <= state.ch;
+      g.append('circle').attr('cx', x(d.label)).attr('cy', on ? y(d.h) : y(0)).attr('r', on ? 4 : 3)
+        .attr('fill', on ? 'var(--real)' : 'var(--panel)')
+        .attr('stroke', on ? 'var(--panel)' : 'var(--muted)').attr('stroke-width', 1.5);
+      if (on) {
+        const txt = d.text || (d.h === 0 ? '0' : (d.h > 0 ? '+' : '−') + Math.abs(d.h) + 'h');
+        g.append('text').attr('x', x(d.label)).attr('y', y(d.h) + (d.h < 0 ? 16 : -9)).attr('text-anchor', 'middle')
+          .attr('font-size', 11).attr('font-weight', 600).attr('fill', 'var(--ink)').text(txt);
+      }
+      g.append('text').attr('x', x(d.label)).attr('y', h - (i % 2 ? 2 : 14)).attr('text-anchor', 'middle')
+        .attr('font-size', 10).attr('fill', on ? 'var(--ink)' : 'var(--muted)').text(d.label);
+    });
+  }
+
+  function setChapter(ch) {
+    state.ch = Math.max(1, Math.min(MAX_CH, ch));
+    renderChapter(); renderLegs(); renderBalance(); renderMoney();
+    focusNow();
+  }
+  document.getElementById('prev').addEventListener('click', () => setChapter(state.ch - 1));
+  document.getElementById('next').addEventListener('click', () => setChapter(state.ch + 1));
+  document.querySelector('.chnav').addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); setChapter(state.ch - 1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); setChapter(state.ch + 1); }
+  });
+  document.getElementById('showPlan').addEventListener('change', e => { state.showPlan = e.target.checked; draw(); });
+  document.getElementById('showReal').addEventListener('change', e => { state.showReal = e.target.checked; draw(); });
+  document.getElementById('showPP').addEventListener('change', e => { state.showPP = e.target.checked; draw(); });
+
+  // Continentes: tenta o mapa do Datamaps e, se falhar, o do ECharts
+  function fixWinding(geo) {
+    const fixPoly = poly => (d3.geoArea({ type: 'Polygon', coordinates: poly }) > 2 * Math.PI ? poly.map(r => r.slice().reverse()) : poly);
+    const fixGeom = g => {
+      if (!g) return g;
+      if (g.type === 'Polygon') return { type: 'Polygon', coordinates: fixPoly(g.coordinates) };
+      if (g.type === 'MultiPolygon') return { type: 'MultiPolygon', coordinates: g.coordinates.map(fixPoly) };
+      return g;
+    };
+    if (geo.type === 'FeatureCollection') {
+      return { type: 'FeatureCollection', features: geo.features.map(f => ({ type: 'Feature', properties: {}, geometry: fixGeom(f.geometry) })) };
+    }
+    return fixGeom(geo);
+  }
+  function fromDatamaps() {
+    const topo = window.Datamap && window.Datamap.prototype && window.Datamap.prototype.worldTopo;
+    if (!topo || !window.topojson) return null;
+    const obj = topo.objects[Object.keys(topo.objects)[0]];
+    try { return { geo: topojson.merge(topo, obj.geometries), merged: true }; }
+    catch (e) { return { geo: topojson.feature(topo, obj), merged: false }; }
+  }
+  function decodeRing(str, off, scale) {
+    const out = []; let px = off[0], py = off[1];
+    for (let i = 0; i < str.length; i += 2) {
+      let x = str.charCodeAt(i) - 64, y = str.charCodeAt(i + 1) - 64;
+      x = (x >> 1) ^ (-(x & 1)); y = (y >> 1) ^ (-(y & 1));
+      x += px; y += py; px = x; py = y;
+      out.push([x / scale, y / scale]);
+    }
+    return out;
+  }
+  function decodeEcharts(json) {
+    if (!json.UTF8Encoding) return json;
+    const scale = json.UTF8Scale || 1024;
+    json.features.forEach(f => {
+      const g = f.geometry;
+      if (g.type === 'Polygon') g.coordinates = g.coordinates.map((r, i) => decodeRing(r, g.encodeOffsets[i], scale));
+      else if (g.type === 'MultiPolygon') g.coordinates = g.coordinates.map((p, j) => p.map((r, i) => decodeRing(r, g.encodeOffsets[j][i], scale)));
+    });
+    return json;
+  }
+  function fromEcharts() {
+    return new Promise((resolve, reject) => {
+      const prev = window.echarts;
+      window.echarts = { registerMap: (name, data) => { window.echarts = prev; resolve(data); } };
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/echarts@4.9.0/map/js/world.js';
+      s.onerror = () => { window.echarts = prev; reject(new Error('load')); };
+      s.onload = () => setTimeout(() => reject(new Error('no map')), 100);
+      document.head.appendChild(s);
+    });
+  }
+  async function loadLand() {
+    try {
+      const d = fromDatamaps();
+      if (d) { land = fixWinding(d.geo); landIsMerged = d.merged; draw(); return; }
+    } catch (e) { /* tenta a próxima fonte */ }
+    try {
+      const json = await fromEcharts();
+      land = fixWinding(decodeEcharts(json)); landIsMerged = false; draw(); return;
+    } catch (e) { /* nenhuma fonte funcionou */ }
+    document.getElementById('landmsg').hidden = false;
+  }
+
+  // Início
+  readColors();
+  const mq = window.matchMedia('(prefers-color-scheme: dark)');
+  (mq.addEventListener ? mq.addEventListener.bind(mq, 'change') : mq.addListener.bind(mq))(() => { readColors(); draw(); });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
+  window.addEventListener('resize', resize);
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(canvas);
+
+  renderChapter(); renderLegs(); renderBalance(); renderMoney();
+  resize();
+  focusNow(true);
+  loadLand();
+})();
+</script>
+</body>
+</html>
