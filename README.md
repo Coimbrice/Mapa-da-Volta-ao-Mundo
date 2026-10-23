@@ -29,3 +29,7 @@ O mapa abre no capítulo I e só mostra o que aconteceu até o capítulo escolhi
 
 - [d3](https://d3js.org/) 7.9.0, [topojson-client](https://github.com/topojson/topojson-client) 3.1.0 e o mapa-múndi do [Datamaps](https://datamaps.github.io/) 0.5.9, com contornos do Natural Earth (domínio público). Se o Datamaps não carregar, a página usa o mapa-múndi do [ECharts](https://echarts.apache.org/) 4.9.0.
 - Fontes IM Fell English e Spectral, do Google Fonts (SIL Open Font License).
+
+## Como foi feito
+
+O código foi escrito com a ajuda do [Claude](https://claude.ai), assistente de IA da Anthropic.
