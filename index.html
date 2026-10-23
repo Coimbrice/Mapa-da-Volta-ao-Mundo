@@ -1337,11 +1337,18 @@ li.sel .leg-title { color: var(--real); }
     }
     return fixGeom(geo);
   }
+  // Fronteiras que não batem entre países vizinhos viram buracos minúsculos depois do merge
+  // e aparecem como riscos no meio dos continentes (Sudão, por exemplo). Lagos e mares
+  // internos de verdade, como o Cáspio, são bem maiores que o limite.
+  function dropSlivers(geo) {
+    const ringArea = r => { const a = d3.geoArea({ type: 'Polygon', coordinates: [r] }); return Math.min(a, 4 * Math.PI - a); };
+    return { type: 'MultiPolygon', coordinates: geo.coordinates.map(poly => poly.filter((r, i) => i === 0 || ringArea(r) > 1e-5)) };
+  }
   function fromDatamaps() {
     const topo = window.Datamap && window.Datamap.prototype && window.Datamap.prototype.worldTopo;
     if (!topo || !window.topojson) return null;
     const obj = topo.objects[Object.keys(topo.objects)[0]];
-    try { return { geo: topojson.merge(topo, obj.geometries), merged: true }; }
+    try { return { geo: dropSlivers(topojson.merge(topo, obj.geometries)), merged: true }; }
     catch (e) { return { geo: topojson.feature(topo, obj), merged: false }; }
   }
   function decodeRing(str, off, scale) {
